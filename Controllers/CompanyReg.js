@@ -1,6 +1,8 @@
 const asynchandler = require('express-async-handler');
-const Company = require('../Models/CompanyUsers');
+const Company = require('../Models/Company');
 const Logss = require('../Models/UserLog');
+const Admin = require('../Models/AdminOwner');
+
 
 // 🟢 COMPANY REGISTRATION
 const CompanyRegs = asynchandler(async (req, res) => {
@@ -10,7 +12,7 @@ const CompanyRegs = asynchandler(async (req, res) => {
       Password,
       Firstname,
       Lastname,
-
+      Adminid,
       StreetName,
       PostalNumber,
       Lat,
@@ -23,6 +25,8 @@ const CompanyRegs = asynchandler(async (req, res) => {
     if (!Username || !Password || !Firstname || !Lastname || !Email || !CompanyName || !CAC_Number)
       return res.status(400).json({ message: 'All fields are required' });
 
+    const adminFound=await Admin.findById(Adminid)
+    if(!adminFound)return res.status(400).json({'message':'Admin not Found'})
     const found = await Company.findOne({ Username })
       .collation({ strength: 2, locale: 'en' })
       .lean()
@@ -64,8 +68,8 @@ const CompanyRegs = asynchandler(async (req, res) => {
     });
 
     
-  
-
+    adminFound.companyId.push(newCompany._id)
+    await adminFound.save()
     res.status(201).json({
       message: `New Company '${Username}' created successfully`,
       company: newCompany,

@@ -1,11 +1,12 @@
-const Products = require("../Models/Products");
+const Products = require("../Models/EcomerceProducts");
 const Owner = require("../Models/AdminOwner");
 const asyncHandler = require("express-async-handler");
 
 const AddProducts = asyncHandler(async (req, res) => {
-  const { name, description, quantity, user_add, img, price } = req.body;
+  const { name, description, quantity, user_add, price } = req.body;
 
-  // Basic validation
+  const img=req.files
+
   if (!name || !description || !quantity || !user_add || !img || !price) {
     return res.status(400).json({ message: "All fields are required" });
   }

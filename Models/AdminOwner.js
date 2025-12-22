@@ -28,16 +28,16 @@ const AdminSchema = new mongoose.Schema(
     Verified: { type: Boolean, default: false },
 
     // Important tenant ID for SaaS apps
-    companyId: {
+    companyId: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: "Company",
       index: true,
-    },
+    }],
 
     // Relationships
     UserLogs: [{ type: mongoose.Schema.Types.ObjectId, ref: "UserLog" }],
-    CompanyUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "Company_User" }],
-    Products: [{ type: mongoose.Schema.Types.ObjectId, ref: "Products" }],
+    EcomerceProducts: [{ type: mongoose.Schema.Types.ObjectId, ref: "EcomerceProducts" }],
+    POSProductsId: [{ type: mongoose.Schema.Types.ObjectId, ref: "POSProducts" }],
     Orders: [{ type: mongoose.Schema.Types.ObjectId, ref: "Order" }],
 
   },

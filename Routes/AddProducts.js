@@ -1,10 +1,10 @@
 const express=require("express")
-const AddProducts = require("../Controllers/AddProducts")
+const {ProductRegs} = require("../Controllers/productController")
 
 const route=express.Router()
 
 
 route.route('/')
-.post(AddProducts)
+.post(ProductRegs)
 
 module.exports=route

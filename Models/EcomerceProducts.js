@@ -1,13 +1,28 @@
 const mongoose = require("mongoose");
 
-const ProductSchema = new mongoose.Schema(
+const EcomerceProducts = new mongoose.Schema(
   {
     companyId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Company",
       index: true,
     },
-
+     UserUpload:{
+          name:String,
+          Username:String,
+          Date:{
+            type:String,
+            default:()=>new Date().toISOString().split('T')[0]
+          },
+          Time:{
+            type:String,
+            default:()=>new Date().toLocaleTimeString()
+          },
+        },
+        ChangeLog:{
+          type:String,
+          default:"Ecomerce"
+        },
     name: { type: String, required: true },
     description: String,
 
@@ -33,4 +48,4 @@ const ProductSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model("Products", ProductSchema);
+module.exports = mongoose.model("EcomerceProducts", EcomerceProducts);

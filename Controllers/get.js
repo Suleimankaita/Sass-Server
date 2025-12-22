@@ -2,7 +2,7 @@
 const asyncHandler = require('express-async-handler');
 const Admin = require('../Models/AdminOwner');
 const Company_User = require('../Models/CompanyUsers');
-const Product = require('../Models/Products');
+const Product = require('../Models/EcomerceProducts');
 const UserLog = require('../Models/UserLog');
 
 // Get all Admins with populated references

@@ -174,7 +174,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
     storage,
-    limits: { fileSize: 5 * 1024 * 1024 },
+    limits: { fileSize: 50 * 1024 * 1024 },
 });
 
 /**
@@ -271,49 +271,50 @@ app.get("/health", (req, res) => {
   });
 });
 
-/**
- * 6. ROUTES
- */
+
 const apiRoutes = express.Router();
 
 apiRoutes.use("/", require("./Routes/Root"));
 
+apiRoutes.use("/AddProducts",upload.array('file'), require("./Routes/AddProducts"));
 
-// apiRoutes.use("/Auth/Login", require("./Routes/Auth"));
+apiRoutes.use("/Auth/Login", require("./Routes/Auth"));
 
-// apiRoutes.use("/Auth/Regs", require("./Routes/UserReg"));
+apiRoutes.use("/Auth/Regs", require("./Routes/UserReg"));
 
-// apiRoutes.use("/Auth/CompanyAuth", require("./Routes/CompanyAuth"));
+apiRoutes.use("/Auth/CompanyAuth", require("./Routes/CompanyAuth"));
 
-// apiRoutes.use("/Auth/CompanyRegs",
+apiRoutes.use("/Products/", require("./Routes/GetComapnyProduct"));
 
-//     upload.fields([{ name: "Logo", maxCount: 1 }, { name: "CAC_img", maxCount: 1 }]),
+apiRoutes.use("/Auth/CompanyRegs",
 
-//     require("./Routes/CompanyReg")
+    upload.fields([{ name: "Logo", maxCount: 1 }, { name: "CAC_img", maxCount: 1 }]),
 
-// );
+    require("./Routes/CompanyReg")
+
+);
 
 
 
-// apiRoutes.use("/api/CompanyUsersRegs", require("./Routes/CompanyUsersRegs"));
+apiRoutes.use("/api/CompanyUsersRegs", require("./Routes/CompanyUsersRegs"));
 
-// apiRoutes.use("/api/CompanyUserAuth", require("./Routes/CompanyUsersAuth"));
+apiRoutes.use("/api/CompanyUserAuth", require("./Routes/CompanyUsersAuth"));
 
-// apiRoutes.use("/api/User/Order", require("./Routes/Order"));
+apiRoutes.use("/api/User/Order", require("./Routes/Order"));
 
-// apiRoutes.use("/api/Verify/CompanyVeried", require("./Routes/VerifyCompany"));
+apiRoutes.use("/api/Verify/CompanyVeried", require("./Routes/VerifyCompany"));
 
-// apiRoutes.use("/api/GetAdmin/UserCompany", require("./Routes/GetCompanyAllUsers_admin"));
+apiRoutes.use("/api/GetAdmin/UserCompany", require("./Routes/GetCompanyAllUsers_admin"));
 
-// apiRoutes.use("/api/Admin/GetUserCompany", require("./Routes/GetAdmin_User"));
+apiRoutes.use("/api/Admin/GetUserCompany", require("./Routes/GetAdmin_User"));
 
-// apiRoutes.use("/api/GetAdmins", require("./Routes/GetAll"));
+apiRoutes.use("/api/GetAdmins", require("./Routes/GetAll"));
 
-// apiRoutes.use("/AddProducts", require("./Routes/AddProducts"));
+apiRoutes.use("/AddProducts", require("./Routes/AddProducts"));
 
-// apiRoutes.use("/Logs", require("./Routes/Logs"));
+apiRoutes.use("/Logs", require("./Routes/Logs"));
 
-// apiRoutes.use("/api", require("./Routes/mainRoutes"));
+apiRoutes.use("/api", require("./Routes/mainRoutes"));
 
 
 

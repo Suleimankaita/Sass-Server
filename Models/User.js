@@ -4,30 +4,12 @@ const UserSchema = new mongoose.Schema(
   {
     Firstname: String,
     Lastname: String,
-    Username: { type: String, unique: true },
-    Password: String,
-    Email: { type: String, unique: true },
-
-    Phone: String,
-
-    companyId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Company",
-      index: true,
-    },
-
-    Address: {
-      StreetName: String,
-      PostalNumber: Number,
-      Lat: Number,
-      Long: Number,
-    },
-
+    Username: { type: String, unique: true }, 
     WalletNumber: Number,
     WalletBalance: { type: Number, default: 0 },
-
     UserLogId: [{ type: mongoose.Schema.Types.ObjectId, ref: "UserLog" }],
     OrderId: [{ type: mongoose.Schema.Types.ObjectId, ref: "Order" }],
+    UserProfileId: { type: mongoose.Schema.Types.ObjectId, ref: "UserProfile" },
     Role:{
       type:String,
       default:"User"
