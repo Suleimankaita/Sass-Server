@@ -299,6 +299,11 @@ apiRoutes.use("/Auth/CompanyRegs",
 apiRoutes.use("/api/CompanyUsersRegs", require("./Routes/CompanyUsersRegs"));
 
 apiRoutes.use("/Branch", require("./Routes/CreateBranch"));
+
+apiRoutes.use("/GetCompanyUsers", require("./Routes/GetCompanyUsers"));
+
+apiRoutes.use("/GetTotalUsers", require("./Routes/GetAllcompanyUsers"));
+
 apiRoutes.use("/Get/Branch", require("./Routes/GetBranch"));
 
 apiRoutes.use("/api/CompanyUserAuth", require("./Routes/CompanyUsersAuth"));
