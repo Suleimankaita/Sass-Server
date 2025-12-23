@@ -298,7 +298,14 @@ apiRoutes.use("/Auth/CompanyRegs",
 
 apiRoutes.use("/api/CompanyUsersRegs", require("./Routes/CompanyUsersRegs"));
 
+apiRoutes.use("/Branch", require("./Routes/CreateBranch"));
+apiRoutes.use("/Get/Branch", require("./Routes/GetBranch"));
+
 apiRoutes.use("/api/CompanyUserAuth", require("./Routes/CompanyUsersAuth"));
+
+apiRoutes.use("/api/CompanyAuth", require("./Routes/CompanyAuth"));
+
+apiRoutes.use("/Get/GetAdminCompany", require("./Routes/GetAdmincompany"));
 
 apiRoutes.use("/api/User/Order", require("./Routes/Order"));
 

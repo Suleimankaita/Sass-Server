@@ -11,7 +11,7 @@ const GetCompanyProduct = asyncHandler(async (req, res) => {
 
     // 1. Fetch Admin and Deep Populate
     const adminUser = await Admin.findById(id).populate({
-      path: 'companyId',
+       path: 'companyId',
       populate: [
         { path: 'POSProductsId', model: 'POSProducts' },
         { path: 'EcomerceProducts', model: 'EcomerceProducts' }

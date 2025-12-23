@@ -27,7 +27,7 @@ const CompanyRegs = asynchandler(async (req, res) => {
 
     const adminFound=await Admin.findById(Adminid)
     if(!adminFound)return res.status(400).json({'message':'Admin not Found'})
-    const found = await Company.findOne({ Username })
+    const found = await Company.findOne({ CompanyName })
       .collation({ strength: 2, locale: 'en' })
       .lean()
       .exec();
@@ -35,7 +35,7 @@ const CompanyRegs = asynchandler(async (req, res) => {
     if (found)
       return res
         .status(409)
-        .json({ message: `The username '${Username}' is already used by another company.` });
+        .json({ message: `'${CompanyName}' is already used by another company. You can make it as a branch` });
 
        const id=   await Logss.create({
       Logs: [

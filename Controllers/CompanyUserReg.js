@@ -1,73 +1,120 @@
-const asynchandler = require('express-async-handler');
-const Company = require('../Models/CompanyUsers');
-const AdminOwner = require('../Models/AdminOwner');
+const asyncHandler = require('express-async-handler');
+// const bcrypt = require('bcrypt');
 
-// 🟢 COMPANY REGISTRATION
-const CompanyRegs = asynchandler(async (req, res) => {
-  try {
-    const {
-      Username,
-      Password,
-      Firstname,
-      Lastname,
-      StreetName,
-      PostalNumber,
-      Lat,
-      CompanyName,
-      id,
-      Long,
-      Email,
-      CAC_Number,
-    } = req.body;
+// Import your Schemas
+const Admin = require('../Models/AdminOwner');
+const Company = require('../Models/Company');
+const Branch = require('../Models/Branch');
+const Profile = require('../Models/Userprofile'); 
+const CompanyUser = require('../Models/CompanyUsers'); 
 
-    if (!Username || !Password || !Firstname || !Lastname || !Email  || !CAC_Number||!CompanyName)
-      return res.status(400).json({ message: 'All fields are required' });
+const RegisterStaff = asyncHandler(async (req, res) => {
+    try {
+        const {
+            Username, Password, Firstname, Lastname, Email,
+            StreetName, PostalNumber, Lat, Long,
+            id,              // The Admin ID (Owner)
+            targetId,        // The ID of the Company OR Branch
+            type             // "company" or "branch"
+        } = req.body;
 
-    const found = await Company.findOne({ Username })
-      .collation({ strength: 2, locale: 'en' })
-      .exec();
+        // 1. Validation
+        if (!Username || !Password || !Firstname || !Lastname || !Email || !id || !targetId || !type) {
+            return res.status(400).json({ message: 'All fields are required' });
+        }
 
-    if (found)
-      return res
-        .status(409)
-        .json({ message: `The username '${Username}' is already used by another company.` });
+        // 2. Check Username Uniqueness
+        const existingUser = await CompanyUser.findOne({ Username })
+            .collation({ strength: 2, locale: 'en' });
+        if (existingUser) return res.status(409).json({ message: 'Username already taken' });
 
+        // 3. Get the Admin to see their Companies
+        // We only need the list of companyIds the admin owns
+        const admin = await Admin.findById(id).select('companyId');
+        if (!admin) return res.status(401).json({ message: 'Admin not found' });
 
-    const AdminFound=await AdminOwner.findOne({_id:id}).collation({ strength: 2, locale: 'en' }).exec()
-    
-    if(AdminFound.CompanyName===Username)return res.status(400).json({'message':`The Username can not be match with the CompanyName `})
-    if(AdminFound.Username===Username)return res.status(400).json({'message':`The Username can not be match with the Owner Username `})
+        let parentDocument = null; 
+        let parentModelName = "";
 
-    const newCompany = await Company.create({
-      Username,
-      Password,
-      Firstname,
-      Lastname,
-      Email,
-      CompanyName,
-      WalletNumber: Math.floor(Math.random() * 90000) + 10000,
-      Address: {
-        StreetName,
-        PostalNumber,
-        Lat,
-        Long,
-      },
-    });
+        // ======================================================
+        // 🟢 TYPE: COMPANY (Direct Link: Admin -> Company)
+        // ======================================================
+        if (type.toLowerCase() === 'company') {
+            
+            // Check if the Admin's "companyId" array contains this targetId
+            const isOwner = admin.companyId.includes(targetId);
+            
+            if (!isOwner) {
+                return res.status(403).json({ message: 'Unauthorized: Admin does not own this Company' });
+            }
 
-    if(!AdminFound.Company_UserId)AdminFound.Company_UserId=[]
+            parentDocument = await Company.findById(targetId);
+            parentModelName = "Company";
 
-    AdminFound.Company_UserId.push(newCompany._id)
+        // ======================================================
+        // 🔵 TYPE: BRANCH (Deep Link: Admin -> Company -> Branch)
+        // ======================================================
+        } else if (type.toLowerCase() === 'branch') {
 
-    await AdminFound.save()
-    
+            // CRITICAL CHANGE: We do NOT look at Admin.BranchId.
+            // We search for a Company that:
+            // 1. Is in the Admin's list of companies (admin.companyId)
+            // 2. Has the targetId inside its OWN "BranchId" array
+            
+            const parentCompany = await Company.findOne({
+                _id: { $in: admin.companyId }, // Company must be owned by Admin
+                BranchId: targetId             // Company must own the Branch
+            });
 
-    res.status(201).json({
-      message: `New Company '${Username}' created successfully`,
-      company: newCompany,
-    });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
+            if (!parentCompany) {
+                return res.status(403).json({ message: 'Unauthorized: This branch is not inside any of your companies.' });
+            }
+
+            // If we found a company, it means the relationship is valid. Now fetch the Branch.
+            parentDocument = await Branch.findById(targetId);
+            parentModelName = "Branch";
+
+        } else {
+            return res.status(400).json({ message: "Invalid type. Use 'company' or 'branch'" });
+        }
+
+        // 4. Create User Profile
+        const newProfile = await Profile.create({
+            Firstname, Lastname, Email,
+            Address: { StreetName, PostalNumber, Lat, Long },
+        });
+
+        // 5. Create Staff User
+        // const hashedPassword = await bcrypt.hash(Password, 10);
+        const newStaffUser = await CompanyUser.create({
+            Username,
+            Password,
+            UserProfileId: newProfile._id,
+        });
+
+        // 6. Link to Parent (Safe Check)
+        if (!parentDocument) {
+            // Clean up if parent wasn't found in the final step
+            await CompanyUser.findByIdAndDelete(newStaffUser._id);
+            await Profile.findByIdAndDelete(newProfile._id);
+            return res.status(404).json({ message: `${parentModelName} record missing` });
+        }
+
+        // 7. Push to the "CompanyUsers" array (Exists in both Branch and Company schemas)
+        if (!parentDocument.CompanyUsers) parentDocument.CompanyUsers = [];
+        
+        parentDocument.CompanyUsers.push(newStaffUser._id);
+        await parentDocument.save();
+
+        res.status(201).json({
+            success: true,
+            message: `User linked to ${parentModelName} successfully`,
+            userId: newStaffUser._id
+        });
+
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
 });
 
-module.exports = CompanyRegs;
+module.exports = RegisterStaff;

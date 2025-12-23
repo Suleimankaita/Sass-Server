@@ -10,6 +10,13 @@ const CompanyUserSchema = new mongoose.Schema(
     Email: { type: String, unique: true },
 
     CompanyName: String,
+  
+    UserProfileId:{
+     type:mongoose.Schema.Types.ObjectId,
+     ref:"UserProfile",
+      index: true,
+
+    },
 
     // For multi-tenant
     companyId: {

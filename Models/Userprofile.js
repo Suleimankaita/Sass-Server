@@ -9,14 +9,16 @@ const UserProfileSchema = new mongoose.Schema(
       Orders: [{ type: mongoose.Schema.Types.ObjectId, ref: "Order" }],
     Password: String,
     Email: { type: String, unique: true },
+    token:String,
     Phone: String,
     Address: {
       StreetName: String,
       PostalNumber: Number,
       Lat: Number,
       Long: Number,
-    },
+    },  
 
+    token:String,
     WalletNumber: Number,
     WalletBalance: { type: Number, default: 0 },
     CompanySuspense: { type: Boolean, default: true },

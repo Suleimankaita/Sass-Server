@@ -10,7 +10,7 @@ const CompanyAuth = asynchandler(async (req, res) => {
     if (!Username || !Password)
       return res.status(400).json({ message: 'All fields are required' });
 
-    const found = await User.findOne({ Username }).exec();
+    const found = await User.findOne({ Username }).populate("UserProfileId").exec();
     if (!found)
       return res.status(400).json({ message: 'User not found' });
 
@@ -52,7 +52,7 @@ const CompanyAuth = asynchandler(async (req, res) => {
       httpOnly: true,
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
-
+    found.UserProfileId.token=accessToken
     const logEntry = await Logss.create({
       name: found.Firstname,
       Username: found.Username,
@@ -60,9 +60,10 @@ const CompanyAuth = asynchandler(async (req, res) => {
       time: new Date().toLocaleTimeString()
     });
 
-    if (!found.UserLogId) found.UserLogId = [];
-    found.UserLogId.push(logEntry._id);
+    if (!found.UserLogs) found.UserLogs = [];
+    found.UserLogs.push(logEntry._id);
     await found.save();
+    await found.UserProfileId.save();
 
     res.status(200).json({
       message: "Login successful",

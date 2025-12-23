@@ -1,6 +1,8 @@
 const asynchandler = require('express-async-handler');
 const Admin = require('../Models/AdminOwner');
 const Logss = require('../Models/UserLog');
+const profile = require('../Models/Userprofile');
+
 
 const AdminRegs = asynchandler(async (req, res) => {
   try {
@@ -31,10 +33,8 @@ const AdminRegs = asynchandler(async (req, res) => {
         .status(409)
         .json({ message: `The username '${Username}' is already used by another admin.` });
 
-    const newAdmin = await Admin.create({
-      Username,
-      Password,
-      Firstname,
+        const newAd=await profile.create({
+ Firstname,
       Lastname,
       Email,
       WalletNumber: Math.floor(Math.random() * 90000) + 10000,
@@ -46,19 +46,27 @@ const AdminRegs = asynchandler(async (req, res) => {
       },
       CompanyName,
       CAC_Number,
+        })
+
+        const log=await Logss.create({
+          Logs: [
+            {
+              name: `${Firstname} ${Lastname}`,
+              Username,
+              Password,
+              Date: new Date().toISOString(),
+              time: new Date().toLocaleTimeString(),
+            },
+          ],
+        });
+    const newAdmin = await Admin.create({
+      Username,
+      Password,
+      UserProfileId:newAd._id,
+      UserLogs:log._id
+     
     });
 
-    await Logss.create({
-      Logs: [
-        {
-          name: `${Firstname} ${Lastname}`,
-          Username,
-          Password,
-          Date: new Date().toISOString(),
-          time: new Date().toLocaleTimeString(),
-        },
-      ],
-    });
 
     res.status(201).json({
       message: `New Admin '${Username}' created successfully`,
