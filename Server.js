@@ -286,6 +286,8 @@ apiRoutes.use("/Auth/CompanyAuth", require("./Routes/CompanyAuth"));
 
 apiRoutes.use("/Products/", require("./Routes/GetComapnyProduct"));
 
+apiRoutes.use("/Settings/", require("./Routes/CompanySettings"));
+
 apiRoutes.use("/Auth/CompanyRegs",
 
     upload.fields([{ name: "Logo", maxCount: 1 }, { name: "CAC_img", maxCount: 1 }]),
@@ -301,6 +303,12 @@ apiRoutes.use("/api/CompanyUsersRegs", require("./Routes/CompanyUsersRegs"));
 apiRoutes.use("/Branch", require("./Routes/CreateBranch"));
 
 apiRoutes.use("/GetCompanyUsers", require("./Routes/GetCompanyUsers"));
+
+apiRoutes.use("/AddCategories", require("./Routes/AddCategories"));
+
+apiRoutes.use("/UpdateCategories", require("./Routes/UpdateCategories"));
+
+apiRoutes.use("/DeleteCategory", require("./Routes/DeleteCategory"));
 
 apiRoutes.use("/GetTotalUsers", require("./Routes/GetAllcompanyUsers"));
 

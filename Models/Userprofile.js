@@ -6,6 +6,7 @@ const UserProfileSchema = new mongoose.Schema(
     EcomerceProducts: [{ type: mongoose.Schema.Types.ObjectId,
       ref: "Products" }],
     POSProductsId: [{ type: mongoose.Schema.Types.ObjectId, ref: "POSProducts" }],
+    UserActivitiesId: [{ type: mongoose.Schema.Types.ObjectId, ref: "UserActivity" }],
       Orders: [{ type: mongoose.Schema.Types.ObjectId, ref: "Order" }],
     Password: String,
     Email: { type: String, unique: true },

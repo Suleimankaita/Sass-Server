@@ -1,10 +1,13 @@
 const mongoose = require("mongoose");
-const slugify = require("slugify"); // Install this: npm install slugify
+const slugify = require("slugify");
+const crypto = require("crypto"); // Built-in Node.js module
+
 const BranchSchema = new mongoose.Schema(
   {
-    CompanyName: String,
-    CompanyPassword: String,
-    CompanyEmail:{ type: String, unique: true },
+    CompanyName: { type: String, required: true },
+    CompanyPassword: { type: String },
+    CompanyEmail: { type: String, unique: true, required: true },
+    CategoriesId: [{ type: mongoose.Schema.Types.ObjectId, ref: "CateGories" }],
     
     Address: {
       StreetName: String,
@@ -15,8 +18,10 @@ const BranchSchema = new mongoose.Schema(
     slug: {
         type: String,
         unique: true,
-        sparse: true // This allows multiple "null" values but keeps strings unique
+        index: true,
+        sparse: true 
     },
+    CompanySettingsId: { type: mongoose.Schema.Types.ObjectId, ref: "CompanySettings" },
     ownerId: { type: mongoose.Schema.Types.ObjectId, ref: "Admin" },
     CompanyUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "Company_User" }],
     EcomerceProducts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Products" }],
@@ -34,10 +39,22 @@ const BranchSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Pre-save hook to automatically create a slug if it doesn't exist
-BranchSchema.pre("save", function (next) {
-    if (this.CompanyName && !this.slug) {
-        this.slug = slugify(this.CompanyName, { lower: true, strict: true });
+// Improved Pre-save hook
+BranchSchema.pre("save", async function (next) {
+    // Only generate slug if CompanyName is modified OR slug doesn't exist
+    if (this.isModified("CompanyName") || !this.slug) {
+        let baseSlug = slugify(this.CompanyName, { lower: true, strict: true });
+
+        // Check if this slug already exists in the database
+        const slugExists = await mongoose.model("Branch").findOne({ slug: baseSlug });
+
+        if (slugExists && slugExists._id.toString() !== this._id.toString()) {
+            // If it exists, append a random 4-character hex string to ensure uniqueness
+            const randomSuffix = crypto.randomBytes(2).toString("hex"); 
+            this.slug = `${baseSlug}-${randomSuffix}`;
+        } else {
+            this.slug = baseSlug;
+        }
     }
     next();
 });

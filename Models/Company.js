@@ -5,9 +5,12 @@ const CompanySchema = new mongoose.Schema(
     CompanyName: String,
     slug: { type: String, unique: true, index: true },
     ownerId: { type: mongoose.Schema.Types.ObjectId, ref: "Admin" },
+    CompanySettingsId: { type: mongoose.Schema.Types.ObjectId, ref: "CompanySettings" },
     CompanyUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "Company_User" }],
     EcomerceProducts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Products" }],
     POSProductsId: [{ type: mongoose.Schema.Types.ObjectId, ref: "POSProducts" }],
+    POSSell: [{ type: mongoose.Schema.Types.ObjectId, ref: "PosSell" }],
+    CategoriesId: [{ type: mongoose.Schema.Types.ObjectId, ref: "CateGories" }],
     Orders: [{ type: mongoose.Schema.Types.ObjectId, ref: "Order" }],
       BranchId: [{
           type: mongoose.Schema.Types.ObjectId,

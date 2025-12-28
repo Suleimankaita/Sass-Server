@@ -35,7 +35,7 @@ const CompanyUserSchema = new mongoose.Schema(
     // Roles: admin, cashier, inventory, rider, sales, etc.
     Role: {
       type: String,
-      enum: ["admin", "cashier", "inventory", "rider", "staff"],
+      enum: ["admin","manager", "cashier", "inventory", "rider", "staff"],
       default: "staff",
     },
 
