@@ -1,75 +1,62 @@
-const Jwt=require('jsonwebtoken');
-const asynchandler=require('express-async-handler');
+const Jwt = require('jsonwebtoken');
+const asynchandler = require('express-async-handler');
+const bcrypt = require('bcryptjs');
 const User = require('../Models/User');
-const Logs=require('../Models/UserLog')
-const Auth=asynchandler(async(req,res)=>{
+const Logs = require('../Models/UserLog');
 
-    try{
+const Auth = asynchandler(async (req, res) => {
+    try {
+        const { Username, Password } = req.body;
 
-        const {Username,Password}=req.body;
+        if (!Username || !Password) return res.status(400).json({ message: 'Username and Password are required' });
 
-        if(!Username||!Password)return res.status(400).json({'message':'All field are required'})
-           
-          const found=await User.findOne({Username}).exec()
-          
-          if(!found)return res.status(400).json({'message':`User not Found`})
+        const found = await User.findOne({ Username }).populate('UserProfileId').exec();
+        if (!found) return res.status(404).json({ message: 'User not found' });
 
-            if(!found.Active)return res.status(501).json({'message':`this account is Already Suspendent Contact Support Ys Store Support@gmail.com `})
+        if (found.Active === false) return res.status(403).json({ message: 'Account suspended. Contact support.' });
 
-             if(found.Username!==Username||found.Password!==Password)return res.status(400).json({'message':`Incorrect Username Or Password`}) 
-                
-                if(found.Username===Username&&found.Password===Password){
-                 const Logs_id=await Logs.create({
-                    Username:found.Username,
-                    name:found.Firstname,
-                    Date:new Date().toISOString().split("T")[0],
-                    time:new Date().toLocaleTimeString()
-                 })
-                if (!found.UserLogId) found.UserLogId = [];
-                    found.UserLogId.push(Logs_id._id);
+        if (!found.UserProfileId || !found.UserProfileId.Password) {
+            return res.status(500).json({ message: 'User profile or password missing' });
+        }
 
-                    if(!found.Role)found.Role="User"
-                    
-                 await found.save()
-                    const accesstoken=Jwt.sign(
-                        {
-                            "UserInfo":{
-                                "Username":found.Username,
-                                "Password":found.Password,
-                                "Role":found.Role,
-                                "id":found._id
-                            }
-                    },process.env.ACCESS_TOKEN_SECRET,
-                    {expiresIn:"5m"}
-                )
+        const passwordMatches = await bcrypt.compare(Password, found.UserProfileId.Password);
+        if (!passwordMatches) return res.status(401).json({ message: 'Incorrect username or password' });
 
-                
-                    const refreshToken=Jwt.sign(
-                        {
-                            "UserInfo":{
-                                "Username":found.Username,
-                                "Password":found.Password,
-                                "Role":found.Role,
-                                "id":found._id
-                            }
-                    },process.env.REFRESH_TOKEN_SECRET,
-                    {expiresIn:"7d"}
-                )
-                
-              
-                res.cookie('jwt', refreshToken, {
-                sameSite: "none",
-                secure: false,
-                httpOnly: true,
-                maxAge: 7 * 24 * 60 * 60 * 1000
-                });
+        // create login log
+        const logEntry = await Logs.create({
+            Username: found.Username,
+            Date: new Date().toISOString().split('T')[0],
+            time: new Date().toLocaleTimeString(),
+        });
 
-                res.status(201).json({accesstoken})
-            }
-    }catch(err){
-        res.status(401).json({'message':err.message})
+        if (!found.UserLogId) found.UserLogId = [];
+        found.UserLogId.push(logEntry._id);
+        if (!found.Role) found.Role = 'User';
+        await found.save();
+
+        const payload = {
+            UserInfo: {
+                Username: found.Username,
+                Role: found.Role,
+                id: found._id,
+            },
+        };
+
+        const accessToken = Jwt.sign(payload, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '15m' });
+        const refreshToken = Jwt.sign(payload, process.env.REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
+
+        const cookieOptions = {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+        };
+
+        res.cookie('jwt', refreshToken, cookieOptions);
+        return res.status(200).json({ accessToken, role: found.Role });
+    } catch (err) {
+        return res.status(500).json({ message: err.message });
     }
+});
 
-})
-
-module.exports=Auth;
+module.exports = Auth;

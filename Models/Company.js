@@ -6,6 +6,7 @@ const CompanySchema = new mongoose.Schema(
     slug: { type: String, unique: true, index: true },
     ownerId: { type: mongoose.Schema.Types.ObjectId, ref: "Admin" },
     CompanySettingsId: { type: mongoose.Schema.Types.ObjectId, ref: "CompanySettings" },
+    TransactionId: [{ type: mongoose.Schema.Types.ObjectId, ref: "Transaction" }],
     CompanyUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "Company_User" }],
     EcomerceProducts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Products" }],
     POSProductsId: [{ type: mongoose.Schema.Types.ObjectId, ref: "POSProducts" }],
@@ -17,6 +18,7 @@ const CompanySchema = new mongoose.Schema(
           ref: "Branch",
           index: true,
         }],
+        DealsId: { type: mongoose.Schema.Types.ObjectId, ref: "DealProduct" },
     subscriptionPlan: {
       type: String,
       enum: ["Free", "Basic", "Pro", "Enterprise"],

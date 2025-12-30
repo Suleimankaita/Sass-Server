@@ -7,9 +7,16 @@ const UserProfileSchema = new mongoose.Schema(
       ref: "Products" }],
     POSProductsId: [{ type: mongoose.Schema.Types.ObjectId, ref: "POSProducts" }],
     UserActivitiesId: [{ type: mongoose.Schema.Types.ObjectId, ref: "UserActivity" }],
+    TicketId: [{ type: mongoose.Schema.Types.ObjectId, ref: "Ticket" }],
       Orders: [{ type: mongoose.Schema.Types.ObjectId, ref: "Order" }],
     Password: String,
-    Email: { type: String, unique: true },
+Email: {
+    type: String,
+    required: true,
+    unique: true,
+    trim: true,
+    lowercase: true
+  },
     token:String,
     Phone: String,
     Address: {
@@ -18,7 +25,7 @@ const UserProfileSchema = new mongoose.Schema(
       Lat: Number,
       Long: Number,
     },  
-
+    CartId:{ type: mongoose.Schema.Types.ObjectId, ref: "Cart" },
     token:String,
     WalletNumber: Number,
     WalletBalance: { type: Number, default: 0 },

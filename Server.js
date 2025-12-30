@@ -286,6 +286,8 @@ apiRoutes.use("/Auth/CompanyAuth", require("./Routes/CompanyAuth"));
 
 apiRoutes.use("/Products/", require("./Routes/GetComapnyProduct"));
 
+apiRoutes.use("/Transaction", require("./Routes/AddTransaction"));
+
 apiRoutes.use("/Settings/", require("./Routes/CompanySettings"));
 
 apiRoutes.use("/Auth/CompanyRegs",
@@ -296,9 +298,13 @@ apiRoutes.use("/Auth/CompanyRegs",
 
 );
 
-
+apiRoutes.use("/food/", upload.single('file'), require("./Routes/FoodPrice"));
 
 apiRoutes.use("/api/CompanyUsersRegs", require("./Routes/CompanyUsersRegs"));
+
+apiRoutes.use("/Cart", require("./Routes/Cart"));
+
+apiRoutes.use("/Deals", require("./Routes/Deals"));
 
 apiRoutes.use("/Branch", require("./Routes/CreateBranch"));
 

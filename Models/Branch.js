@@ -21,7 +21,9 @@ const BranchSchema = new mongoose.Schema(
         index: true,
         sparse: true 
     },
+        TransactionId: [{ type: mongoose.Schema.Types.ObjectId, ref: "Transaction" }],
     CompanySettingsId: { type: mongoose.Schema.Types.ObjectId, ref: "CompanySettings" },
+    DealsId: { type: mongoose.Schema.Types.ObjectId, ref: "DealProduct" },
     ownerId: { type: mongoose.Schema.Types.ObjectId, ref: "Admin" },
     CompanyUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "Company_User" }],
     EcomerceProducts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Products" }],

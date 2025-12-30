@@ -1,43 +1,66 @@
-const asynchandler=require('express-async-handler');
-// const bcrypt=require("bc")   
-const Users=require("../Models/User")
-const Company=require("../Models/AdminOwner")
+const asynchandler = require('express-async-handler');
+const bcrypt = require('bcryptjs');
+const Users = require("../Models/User");
+const Userprofile = require("../Models/Userprofile");
+const Company = require("../Models/AdminOwner");
 
-const UserReg=asynchandler(async(req,res)=>{
+const UserReg = asynchandler(async (req, res) => {
+    try {
+        const {
+            Username,
+            Password,
+            Firstname,
+            Lastname,
+            StreetName,
+            PostalNumber,
+            Lat,
+            Long,
+            Email,
+        } = req.body;
 
-    try{
+        if (!Username || !Password || !Firstname || !Lastname || !Email) {
+            return res.status(400).json({ message: 'Username, Password, Firstname, Lastname and Email are required' });
+        }
 
-        const {Username,Password,Firstname,Lastname,StreetName, PostalNumber,Lat,Long,Email}=req.body;
+        // Check username uniqueness (case-insensitive)
+        const found = await Users.findOne({ Username }).collation({ strength: 2, locale: 'en' }).exec();
+        if (found) return res.status(409).json({ message: `This username ${Username} already exists` });
 
-        if(!Username&&!Password&&!Firstname&&!Lastname&&!Email)return res.status(400).json({'message':'All Field are required '})
+        // Check email uniqueness in Userprofile
+        const emailFound = await Userprofile.findOne({ Email }).collation({ strength: 2, locale: 'en' }).exec();
+        if (emailFound) return res.status(409).json({ message: `This email ${Email} is already in use` });
 
-            const found=await Users.findOne({Username}).collation({strength:2,locale:'en'}).exec();
-            // const CompanyFound=await Company.findOne({Username}).collation({strength:2,locale:'en'}).exec();
-            
-            if(found)return res.status(409).json({'message':`this Username ${Username} is Already exist`});
-            
-            // if(CompanyFound)return res.status(409).json({'message':`this Username ${Username} is Already Taken On another Company`});
-            
-            // if(found.Email)return res.status(409).json({'message':`this Email ${Email} is Already Taken by another User`})
-                
-                await Users.create({
-                    Username,
-                    Password,
-                    Firstname,
-                    Lastname,
-                    Email,
-                    WalletNumber:10023,
-                    Address:{
-                    StreetName, 
-                    PostalNumber,
-                    Lat,
-                    Long,
-                }
-                })
-                res.status(201).json({'message':`new User is Created ${Username}`})
-    }catch(err){
-        res.status(401).json({'message':err.message})
+        // Hash password
+        const salt = await bcrypt.genSalt(10);
+        const hashed = await bcrypt.hash(Password, salt);
+
+        // Create profile (store hashed password)
+        const createdProfile = await Userprofile.create({
+            Password: hashed,
+            Email,
+        });
+
+        // Normalize PostalNumber to number if provided
+        const postalNum = PostalNumber ? Number(PostalNumber) : undefined;
+
+        await Users.create({
+            Username,
+            Firstname,
+            Lastname,
+            UserProfileId: createdProfile._id,
+            WalletNumber: 10023,
+            Address: {
+                StreetName,
+                PostalNumber: postalNum,
+                Lat,
+                Long,
+            },
+        });
+
+        return res.status(201).json({ message: `New user created: ${Username}` });
+    } catch (err) {
+        return res.status(500).json({ message: err.message });
     }
-})
+});
 
-module.exports=UserReg;
+module.exports = UserReg;
