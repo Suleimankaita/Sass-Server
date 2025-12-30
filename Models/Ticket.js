@@ -1,27 +1,27 @@
-const mongoose=require('mongoose')
+const mongoose = require("mongoose");
 
 const TicketSchema = new mongoose.Schema({
   ticketId: {
-    type: String,            // "EC2023-00123"
+    type: String,              // EC2023-00123
     required: true,
     unique: true,
     index: true
   },
 
   subject: {
-    type: String,            // "Missing Item in Order"
+    type: String,
+    required: true
+  },
+
+  customer: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
     required: true
   },
 
   assignedAgent: {
-    name: {
-      type: String,          // "Jane Doe"
-      required: true
-    },
-    agentId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User"
-    }
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User"
   },
 
   status: {
@@ -31,15 +31,11 @@ const TicketSchema = new mongoose.Schema({
   },
 
   statusColor: {
-    type: String,            // "bg-red-500", "bg-yellow-500"
+    type: String,              // bg-red-500, bg-yellow-500
     required: true
   },
 
-  lastActivityAt: {
-    type: Date               // used to compute "1 hour ago"
-  },
-
-  createdAt: {
+  lastMessageAt: {
     type: Date,
     default: Date.now
   },
@@ -47,9 +43,6 @@ const TicketSchema = new mongoose.Schema({
   closedAt: {
     type: Date
   }
-},
-{
-    timestamps:true
-});
+}, { timestamps: true });
 
-module.exports=mongoose.model('Ticket',TicketSchema)
+module.exports = mongoose.model("Ticket", TicketSchema);

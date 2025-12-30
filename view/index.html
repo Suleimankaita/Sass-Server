@@ -1,11 +1,309 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dynamic Email Template</title>
+<style>
+  /* --- Reset and Base Styles for Email Compatibility --- */
+  body, table, td, p, a, li, blockquote {
+    -webkit-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+  }
+  table, td {
+    mso-table-lspace: 0pt;
+    mso-table-rspace: 0pt;
+  }
+  img {
+    -ms-interpolation-mode: bicubic;
+    border: 0;
+    height: auto;
+    line-height: 100%;
+    outline: none;
+    text-decoration: none;
+    display: block;
+  }
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    background-color: #f4f4f4;
+  }
+
+  /* --- Main Container Styles --- */
+  .email-container {
+    max-width: 600px;
+    margin: 20px auto;
+    background-color: #ffffff;
+    border: 1px solid #dddddd;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  }
+
+  /* --- Banner Styles --- */
+  .banner-container {
+    background-color: #1a253a; /* Default */
+    padding: 0;
+  }
+  .banner-img {
+    width: 100%;
+    max-width: 600px;
+    height: 200px;
+    background-position: center;
+    background-size: cover;
+  }
+
+  /* --- Content Styles --- */
+  .content-padding {
+    padding: 30px;
+  }
+  p {
+    color: #555555;
+    font-size: 16px;
+    line-height: 1.5;
+    margin: 0 0 20px;
+  }
+  .alert-text {
+    font-weight: bold;
+    font-size: 18px;
+    margin-bottom: 20px;
+  }
+
+  /* --- List Styles --- */
+  .info-list {
+    width: 100%;
+    margin-bottom: 30px;
+  }
+  .info-list td {
+    padding-bottom: 15px;
+    vertical-align: top;
+  }
+  .list-icon {
+    width: 40px;
+    padding-right: 15px;
+  }
+  .list-icon img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%; /* Optional: for circular icons */
+  }
+  .list-text {
+    font-size: 16px;
+    line-height: 1.4;
+    color: #333333;
+  }
+
+  /* --- Button Styles --- */
+  .button-container {
+    text-align: center;
+    margin: 30px 0;
+  }
+  .button {
+    display: inline-block;
+    padding: 15px 30px;
+    font-size: 18px;
+    font-weight: bold;
+    color: #ffffff !important;
+    text-decoration: none;
+    border-radius: 5px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+  }
+
+  /* --- Footer Styles --- */
+  .footer {
+    background-color: #f9f9f9;
+    padding: 20px 30px;
+    border-top: 1px solid #eeeeee;
+    font-size: 12px;
+    color: #888888;
+    text-align: left;
+  }
+  .footer a {
+    color: #888888;
+    text-decoration: underline;
+  }
+  .footer-links {
+    text-align: right;
+  }
+
+  /* --- Dynamic Themes --- */
+  /* Critical Maintenance (Matches image_2.png) */
+  .theme-critical .banner-container { background-color: #1a253a; }
+  .theme-critical .alert-text { color: #c0392b; }
+  .theme-critical .button { background-color: #e67e22; background-image: linear-gradient(to bottom, #f39c12, #d68910); }
+
+  /* General Announcement (Blue Theme) */
+  .theme-general .banner-container { background-color: #3498db; }
+  .theme-general .alert-text { color: #3498db; }
+  .theme-general .button { background-color: #3498db; background-image: linear-gradient(to bottom, #5dade2, #3498db); }
+
+  /* New Feature (Green Theme) */
+  .theme-feature .banner-container { background-color: #2ecc71; }
+  .theme-feature .alert-text { color: #2ecc71; }
+  .theme-feature .button { background-color: #2ecc71; background-image: linear-gradient(to bottom, #58d68d, #2ecc71); }
+
+  /* Security Alert (Red Theme) */
+  .theme-security .banner-container { background-color: #e74c3c; }
+  .theme-security .alert-text { color: #e74c3c; }
+  .theme-security .button { background-color: #c0392b; background-image: linear-gradient(to bottom, #e74c3c, #c0392b); }
+
+</style>
 </head>
 <body>
-    <h1>Suleiman yusuf kaita </h1>
+
+  <div style="max-width: 600px; margin: 20px auto; text-align: center; padding: 15px; background: #fff; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+    <label for="notificationType" style="font-weight: bold; margin-right: 10px; font-family: sans-serif;">Select Notification Type:</label>
+    <select id="notificationType" onchange="updateEmailContent()" style="padding: 8px; font-size: 14px; border-radius: 4px; border: 1px solid #ccc;">
+      <option value="Critical Maintenance">Critical Maintenance</option>
+      <option value="General Announcement">General Announcement</option>
+      <option value="New Feature">New Feature</option>
+      <option value="Security Alert">Security Alert</option>
+    </select>
+  </div>
+
+  <table border="0" cellpadding="0" cellspacing="0" width="100%">
+    <tr>
+      <td align="center">
+        <div class="email-container theme-critical" id="emailThemeWrapper">
+          
+          <div class="banner-container">
+            <img src="./Pos banner.png" alt="Notification Banner" class="banner-img" id="bannerImage">
+          </div>
+
+          <div class="content-padding">
+            <p>Dear User,</p>
+            <p class="alert-text" id="alertTitle"></p>
+            <p id="introText"></p>
+            <p id="actionText"></p>
+
+            <table class="info-list" border="0" cellpadding="0" cellspacing="0" id="dynamicList">
+              </table>
+
+            <div class="button-container">
+              <a href="#" class="button" id="ctaButton"></a>
+            </div>
+
+            <p><strong>Need Assistance?</strong><br>Our support team is here 24/7. Contact us at <a href="mailto:support@yourcompany.com" style="color: #3498db;">support@yourcompany.com</a>.</p>
+            <p>Thank you for your attention!</p>
+            <p>Best regards,<br>Your Company Team</p>
+          </div>
+
+          <table class="footer" border="0" cellpadding="0" cellspacing="0" width="100%">
+            <tr>
+              <td width="60%" valign="top">
+                <strong>Your Company Inc.</strong><br>
+                123 Business St, Somewhere, NY 12345
+              </td>
+              <td class="footer-links" width="40%" valign="top">
+                <a href="#">Contact Support</a> | <a href="#">Visit Dashboard</a> | <a href="#">Unsubscribe</a>
+              </td>
+            </tr>
+          </table>
+
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  <script>
+    // --- Configuration Data for Each Notification Type ---
+    const contentData = {
+      "Critical Maintenance": {
+        theme: "theme-critical",
+        // Replace with your actual banner URL
+        bannerUrl: "./maintance.png", 
+        alertTitle: "IMPORTANT ACTION REQUIRED!",
+        introText: "We're excited to announce that <strong>Version 2.4.1</strong> of our POS system will go live tonight at midnight.",
+        actionText: "Please <strong>sync all your terminals</strong> to ensure a smooth update and continued operation:",
+        buttonText: "SYNC YOUR TERMINALS NOW →",
+        listItems: [
+          // Replace with your actual icon URLs
+          { icon: "https://via.placeholder.com/40/f39c12/ffffff?text=⏰", text: "<strong>Update by Midnight</strong> to Avoid Disruption" },
+          { icon: "https://via.placeholder.com/40/3498db/ffffff?text=📩", text: "<strong>Receive New Features & Security Patches</strong>" },
+          { icon: "https://via.placeholder.com/40/2ecc71/ffffff?text=✅", text: "<strong>Confirm Sync Success</strong> Afterwards" }
+        ]
+      },
+      "General Announcement": {
+        theme: "theme-general",
+        // Replace with your actual banner URL
+        bannerUrl: "./Pos banner.png", 
+        alertTitle: "ANNOUNCEMENT",
+        introText: "We have some general news and updates regarding your POS system and services.",
+        actionText: "Please take a moment to review the following information:",
+        buttonText: "READ FULL ANNOUNCEMENT →",
+        listItems: [
+          // Replace with your actual icon URLs
+          { icon: "https://via.placeholder.com/40/3498db/ffffff?text=📢", text: "<strong>New Dashboard Features</strong> are now available for reporting." },
+          { icon: "https://via.placeholder.com/40/3498db/ffffff?text=📅", text: "<strong>Upcoming Holiday Schedule</strong> for support hours has been posted." }
+        ]
+      },
+      "New Feature": {
+        theme: "theme-feature",
+        // Replace with your actual banner URL
+        bannerUrl: "./Security.png", 
+        alertTitle: "EXCITING NEWS!",
+        introText: "We've just released a new set of features to help you manage your business more effectively.",
+        actionText: "Check out what's new and how it can benefit you:",
+        buttonText: "EXPLORE NEW FEATURES →",
+        listItems: [
+          // Replace with your actual icon URLs
+          { icon: "https://via.placeholder.com/40/2ecc71/ffffff?text=🚀", text: "<strong>Faster Checkout Process</strong> with optimized workflows." },
+          { icon: "https://via.placeholder.com/40/2ecc71/ffffff?text=💳", text: "<strong>Integrated Contactless Payments</strong> are now supported." }
+        ]
+      },
+      "Security Alert": {
+        theme: "theme-security",
+        // Replace with your actual banner URL
+        bannerUrl: "./Security.png", 
+        alertTitle: "SECURITY ACTION REQUIRED",
+        introText: "Our security team has detected a potential issue that requires your immediate attention.",
+        actionText: "Please follow the steps below to secure your account and terminals:",
+        buttonText: "SECURE YOUR ACCOUNT NOW →",
+        listItems: [
+          // Replace with your actual icon URLs
+          { icon: "https://via.placeholder.com/40/e74c3c/ffffff?text=🔒", text: "<strong>Change Your Password</strong> immediately from a secure device." },
+          { icon: "https://via.placeholder.com/40/e74c3c/ffffff?text=🛡️", text: "<strong>Review Recent Activity</strong> for any suspicious actions." }
+        ]
+      }
+    };
+
+    // --- Function to Update Email Content ---
+    function updateEmailContent() {
+      const selectedType = document.getElementById('notificationType').value;
+      const data = contentData[selectedType];
+      const themeWrapper = document.getElementById('emailThemeWrapper');
+
+      // 1. Update Theme Class
+      themeWrapper.className = 'email-container ' + data.theme;
+
+      // 2. Update Banner Image
+      document.getElementById('bannerImage').src = data.bannerUrl;
+      document.getElementById('bannerImage').alt = selectedType + " Banner";
+
+      // 3. Update Text Content
+      document.getElementById('alertTitle').innerHTML = data.alertTitle;
+      document.getElementById('introText').innerHTML = data.introText;
+      document.getElementById('actionText').innerHTML = data.actionText;
+      document.getElementById('ctaButton').innerHTML = data.buttonText;
+
+      // 4. Update List Items
+      const listContainer = document.getElementById('dynamicList');
+      listContainer.innerHTML = ''; // Clear existing items
+      data.listItems.forEach(item => {
+        const row = `
+          <tr>
+            <td class="list-icon"><img src="${item.icon}" alt="icon"></td>
+            <td class="list-text">${item.text}</td>
+          </tr>
+        `;
+        listContainer.innerHTML += row;
+      });
+    }
+
+    // --- Initialize on Page Load ---
+    window.onload = updateEmailContent;
+  </script>
 </body>
 </html>

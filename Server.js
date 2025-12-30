@@ -11,7 +11,7 @@ const os = require("os");
 const path = require("path");
 const http = require("http");
 const { Server } = require("socket.io");
-
+const { initCustomerCare } = require('./Controllers/ticketSocket');
 // Sticky & Cluster Adapter Dependencies
 const { setupMaster, setupWorker } = require("@socket.io/sticky");
 const { createAdapter, setupPrimary } = require("@socket.io/cluster-adapter");
@@ -158,8 +158,12 @@ app.use((req, res, next) => {
     next();
 });
 
+// Initialize ticket socket handlers
+
+initCustomerCare(io);
+
 io.on("connection", (socket) => {
-    // console.log(`Connected to worker ${process.pid}`);
+    // connected to worker
 });
 
 /**
@@ -307,6 +311,8 @@ apiRoutes.use("/Cart", require("./Routes/Cart"));
 apiRoutes.use("/Deals", require("./Routes/Deals"));
 
 apiRoutes.use("/Branch", require("./Routes/CreateBranch"));
+
+apiRoutes.use("/Notifications", require("./Routes/Notifications"));
 
 apiRoutes.use("/GetCompanyUsers", require("./Routes/GetCompanyUsers"));
 
