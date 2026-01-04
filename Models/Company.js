@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const CompanySchema = new mongoose.Schema(
   {
     CompanyName: String,
-    slug: { type: String, unique: true, index: true },
+    // slug: { type: String, unique: true, index: true },
     ownerId: { type: mongoose.Schema.Types.ObjectId, ref: "Admin" },
     CompanySettingsId: { type: mongoose.Schema.Types.ObjectId, ref: "CompanySettings" },
     TransactionId: [{ type: mongoose.Schema.Types.ObjectId, ref: "Transaction" }],
@@ -13,6 +13,7 @@ const CompanySchema = new mongoose.Schema(
     POSSell: [{ type: mongoose.Schema.Types.ObjectId, ref: "PosSell" }],
     CategoriesId: [{ type: mongoose.Schema.Types.ObjectId, ref: "CateGories" }],
     Orders: [{ type: mongoose.Schema.Types.ObjectId, ref: "Order" }],
+    SaleId: [{ type: mongoose.Schema.Types.ObjectId, ref: "Sale" }],
       BranchId: [{
           type: mongoose.Schema.Types.ObjectId,
           ref: "Branch",

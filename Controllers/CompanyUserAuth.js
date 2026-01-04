@@ -28,7 +28,8 @@ const CompanyAuth = asynchandler(async (req, res) => {
         UserInfo: {
           Username: found.Username,
           Role: found.Role,
-          id: found._id
+          id: found._id,
+          companyId:found.companyId
         }
       },
       process.env.ACCESS_TOKEN_SECRET,
@@ -40,7 +41,8 @@ const CompanyAuth = asynchandler(async (req, res) => {
         UserInfo: {
           Username: found.Username,
           Role: found.Role,
-          id: found._id
+          id: found._id,
+          companyId:found.companyId
         }
       },
       process.env.REFRESH_TOKEN_SECRET,

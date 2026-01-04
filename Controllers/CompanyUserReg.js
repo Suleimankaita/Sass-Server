@@ -86,13 +86,16 @@ const RegisterStaff = asyncHandler(async (req, res) => {
 
         // 5. Create Staff User
         // const hashedPassword = await bcrypt.hash(Password, 10);
+      const companyOrBranchKey = type === "company" ? "companyId" : "BranchId";
+
         const newStaffUser = await CompanyUser.create({
             Username,
             Password,
+            [companyOrBranchKey]: targetId,
             UserProfileId: newProfile._id,
         });
 
-        // 6. Link to Parent (Safe Check)
+                // 6. Link to Parent (Safe Check)
         if (!parentDocument) {
             // Clean up if parent wasn't found in the final step
             await CompanyUser.findByIdAndDelete(newStaffUser._id);

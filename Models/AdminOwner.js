@@ -35,11 +35,12 @@ const AdminSchema = new mongoose.Schema(
     Verified: { type: Boolean, default: false },
 
     // Important tenant ID for SaaS apps
-    companyId: [{
+    companyId:{
       type: mongoose.Schema.Types.ObjectId,
       ref: "Company",
       index: true,
-    }],
+      unique:true
+    },
     // BranchId: [{
     //   type: mongoose.Schema.Types.ObjectId,
     //   ref: "Branch",
@@ -47,7 +48,11 @@ const AdminSchema = new mongoose.Schema(
     // }],
 
     // Relationships
-    UserLogs: [{ type: mongoose.Schema.Types.ObjectId, ref: "UserLog" }],
+     Role:{
+      type:String,
+      default:"Admin"
+    },  
+    UserLogId: [{ type: mongoose.Schema.Types.ObjectId, ref: "UserLog" }],
     // EcomerceProducts: [{ type: mongoose.Schema.Types.ObjectId, ref: "EcomerceProducts" }],
     // POSProductsId: [{ type: mongoose.Schema.Types.ObjectId, ref: "POSProducts" }],
     // Orders: [{ type: mongoose.Schema.Types.ObjectId, ref: "Order" }],

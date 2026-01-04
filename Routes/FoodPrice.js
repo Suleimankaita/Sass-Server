@@ -4,7 +4,7 @@ const Verify = require('../Middleware/Verify');
 const PriceController = require('../Controllers/FoodPrice');
 
 // Create a price (protected)
-router.post('/', Verify, PriceController.createPrice);
+router.post('/', PriceController.createPrice);
 
 // Get a single price by id
 router.get('/:id', PriceController.getPrice);

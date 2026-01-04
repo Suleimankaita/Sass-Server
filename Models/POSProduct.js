@@ -31,7 +31,7 @@ const ProductSchema = new mongoose.Schema(
 
     sku: { type: String, index: true },
     barcode: { type: String, index: true },
-    category: String,
+    categoryName: String,
     quantity: { type: Number, default: 0 },
     reorderLevel: { type: Number, default: 5 },
 

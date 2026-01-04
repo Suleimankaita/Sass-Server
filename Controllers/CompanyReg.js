@@ -22,10 +22,12 @@ const CompanyRegs = asynchandler(async (req, res) => {
       CAC_Number,
     } = req.body;
 
+    console.log(req.files)
+    console.log(req.body)
     if (!Username || !Password || !Firstname || !Lastname || !Email || !CompanyName || !CAC_Number)
       return res.status(400).json({ message: 'All fields are required' });
 
-    const adminFound=await Admin.findById(Adminid)
+    const adminFound=await Admin.findOne({Username}).exec()
     if(!adminFound)return res.status(400).json({'message':'Admin not Found'})
     const found = await Company.findOne({ CompanyName })
       .collation({ strength: 2, locale: 'en' })
@@ -38,15 +40,13 @@ const CompanyRegs = asynchandler(async (req, res) => {
         .json({ message: `'${CompanyName}' is already used by another company. You can make it as a branch` });
 
        const id=   await Logss.create({
-      Logs: [
-        {
+     
           name: `${Firstname} ${Lastname}`,
           Username,
           Password,
           Date: new Date().toISOString(),
           time: new Date().toLocaleTimeString(),
-        },
-      ],
+     
     });
 
     const newCompany = await Company.create({
@@ -67,12 +67,13 @@ const CompanyRegs = asynchandler(async (req, res) => {
       UserLog:id._id
     });
 
-    
-    adminFound.companyId.push(newCompany._id)
+    console.log(newCompany)
+    adminFound.companyId=newCompany._id
     await adminFound.save()
     res.status(201).json({
       message: `New Company '${Username}' created successfully`,
       company: newCompany,
+      status: 201,
     });
   } catch (err) {
     res.status(500).json({ message: err.message });

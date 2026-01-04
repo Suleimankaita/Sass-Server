@@ -19,8 +19,8 @@ const AdminRegs = asynchandler(async (req, res) => {
       CompanyName,
       CAC_Number,
     } = req.body;
-
-    if (!Username || !Password || !Firstname || !Lastname || !Email || !CompanyName || !CAC_Number)
+    console.log(req.body);
+    if (!Username || !Password || !Firstname || !Lastname || !Email )
       return res.status(400).json({ message: 'All fields are required' });
 
     const found = await Admin.findOne({ Username })
@@ -33,10 +33,14 @@ const AdminRegs = asynchandler(async (req, res) => {
         .status(409)
         .json({ message: `The username '${Username}' is already used by another admin.` });
 
+        const emailfound=await profile.findOne({Email}).exec()
+        if(emailfound)return res.status(409).json({'message':'Email already in use'})
+
         const newAd=await profile.create({
  Firstname,
       Lastname,
       Email,
+      password:Password,
       WalletNumber: Math.floor(Math.random() * 90000) + 10000,
       Address: {
         StreetName,
@@ -49,21 +53,18 @@ const AdminRegs = asynchandler(async (req, res) => {
         })
 
         const log=await Logss.create({
-          Logs: [
-            {
+          
+            
               name: `${Firstname} ${Lastname}`,
               Username,
-              Password,
+              // Password,
               Date: new Date().toISOString(),
               time: new Date().toLocaleTimeString(),
-            },
-          ],
-        });
+                    });
     const newAdmin = await Admin.create({
       Username,
-      Password,
       UserProfileId:newAd._id,
-      UserLogs:log._id
+      UserLogId:log._id,
      
     });
 
@@ -71,6 +72,8 @@ const AdminRegs = asynchandler(async (req, res) => {
     res.status(201).json({
       message: `New Admin '${Username}' created successfully`,
       admin: newAdmin,
+      status: 201,
+      
     });
   } catch (err) {
     res.status(500).json({ message: err.message });

@@ -28,6 +28,7 @@ const CompanyAuth = asynchandler(async (req, res) => {
           Username: found.Username,
           Role: found.Role,
           id: found._id
+          
         }
       },
       process.env.ACCESS_TOKEN_SECRET,

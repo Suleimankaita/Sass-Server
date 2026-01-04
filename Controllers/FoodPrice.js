@@ -1,7 +1,6 @@
 const asynchandler = require('express-async-handler');
 const mongoose = require('mongoose');
 const FoodPrice = require('../Models/FoodPrice');
-
 // Compute effective price applying discount, seasonal adjustment and tax
 function computeEffectivePrice(doc) {
   if (!doc) return null;
@@ -38,6 +37,7 @@ function computeEffectivePrice(doc) {
 // Create price
 const createPrice = asynchandler(async (req, res) => {
   const body = req.body;
+  console.log(req.file);
   if (!body.name || body.basePrice == null) return res.status(400).json({ message: 'name and basePrice required' });
 
   if (body.companyId && !mongoose.Types.ObjectId.isValid(body.companyId)) {

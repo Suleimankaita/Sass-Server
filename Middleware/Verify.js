@@ -7,9 +7,8 @@ const Company = require("../Models/AdminOwner");
 const Verify = asynchandler(async (req, res, next) => {
     // 1. Extract Token
     const authHeader = req.headers.authorization || req.headers['Authorization'];
-
     if (!authHeader?.startsWith('Bearer ')) {
-        return res.status(401).json({ message: "Unauthorized: No token provided" });
+        return res.status(403).json({ message: "Unauthorized: No token provided" });
     }
 
     const token = authHeader.split(' ')[1];
@@ -58,7 +57,6 @@ const Verify = asynchandler(async (req, res, next) => {
 
         // 7. Attach data to Request object
         // We attach the whole object (excluding password) for use in later routes
-        console.log(foundAccount)
         req.user = foundAccount;
         req.userId = id;
         req.username = Username;

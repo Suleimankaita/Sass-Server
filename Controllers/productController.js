@@ -11,11 +11,11 @@ const Company = require('../Models/Company');
  * 🟢 ADD PRODUCT
  */
 const ProductRegs = asyncHandler(async (req, res) => {
-  const { name, description, price, quantity, Selection, id, sku, barcode, costPrice, category, reorderLevel,CompanyId } = req.body;
+  const { name, description, price, quantity, Selection, id, sku, barcode, costPrice, category, reorderLevel,CompanyId,categoryName } = req.body;
   const files = req.files;
-
+  console.log(files)
   // 1. Validation
-  if (!name || !price || !quantity || !Selection || !id||!CompanyId) {
+  if (!name || !price || !quantity || !Selection || !id||!CompanyId||!categoryName) {
     return res.status(400).json({ message: 'All required fields must be provided' });
   }
 
@@ -64,7 +64,7 @@ const ProductRegs = asyncHandler(async (req, res) => {
   const finalSku = sku || `SKU-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
   const imgPaths = files && Array.isArray(files) 
-    ? files.map(file => file.path || file.filename) // Adjust based on your upload middleware (Multer/Cloudinary)
+    ? files.map(file => file.filename) // Adjust based on your upload middleware (Multer/Cloudinary)
     : [];
 
   const baseProductData = {
@@ -72,6 +72,7 @@ const ProductRegs = asyncHandler(async (req, res) => {
     name,
     description,
     price,
+    categoryName,
     costPrice,
     quantity,
     sku: finalSku, // Shared SKU

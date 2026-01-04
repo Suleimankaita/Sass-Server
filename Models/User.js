@@ -18,5 +18,5 @@ const UserSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
+  
 module.exports = mongoose.model("YS_store_Users", UserSchema);

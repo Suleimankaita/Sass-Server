@@ -21,6 +21,7 @@ const BranchSchema = new mongoose.Schema(
         index: true,
         sparse: true 
     },
+        SaleId: [{ type: mongoose.Schema.Types.ObjectId, ref: "Sale" }],
         TransactionId: [{ type: mongoose.Schema.Types.ObjectId, ref: "Transaction" }],
     CompanySettingsId: { type: mongoose.Schema.Types.ObjectId, ref: "CompanySettings" },
     DealsId: { type: mongoose.Schema.Types.ObjectId, ref: "DealProduct" },

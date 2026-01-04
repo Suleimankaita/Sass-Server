@@ -9,8 +9,10 @@ function initCustomerCare(io, options = {}) {
 
   io.on('connection', (socket) => {
     socket.on('join_room', ({ ticketId, userId, role } = {}) => {
+      console.log(role," send")
       if (!ticketId) return socket.emit('error', { message: 'ticketId required' });
       const room = `ticket:${ticketId}`;
+      
       socket.join(room);
       socket.ticketRoom = room;
       socket.userId = userId || socket.id;

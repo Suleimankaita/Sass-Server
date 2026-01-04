@@ -20,17 +20,16 @@ const PaymentMethodSchema = new mongoose.Schema({
 const UserProfileSchema = new mongoose.Schema(
   {
     // Identity / Account Info
-    fullName: { type: String, required: true, trim: true },
+    fullName: { type: String, trim: true },
     companyName: { type: String, trim: true },
-    email: {
+    Email: {
       type: String,
       required: true,
-      unique: true,
       lowercase: true,
       trim: true,
     },
     phone: { type: String, trim: true },
-    password: { type: String, required: true },
+    password: { type: String,  },
     token: { type: String, default: null },
     profileImage: { type: String, default: null },
 
@@ -58,6 +57,13 @@ const UserProfileSchema = new mongoose.Schema(
     userActivities: [{ type: mongoose.Schema.Types.ObjectId, ref: "UserActivity" }],
   },
   { timestamps: true } // adds createdAt and updatedAt
+);
+
+// Create a unique index only for documents where Email is present and not null.
+// This avoids duplicate-key errors caused by multiple documents with Email: null.
+UserProfileSchema.index(
+  { Email: 1 },
+  { unique: true, partialFilterExpression: { Email: { $exists: true, $ne: null } } }
 );
 
 module.exports = mongoose.model("UserProfile", UserProfileSchema);

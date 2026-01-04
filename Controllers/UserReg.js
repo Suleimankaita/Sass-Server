@@ -36,7 +36,7 @@ const UserReg = asynchandler(async (req, res) => {
 
         // Create profile (store hashed password)
         const createdProfile = await Userprofile.create({
-            Password: hashed,
+            password: hashed,
             Email,
         });
 

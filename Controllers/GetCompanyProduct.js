@@ -14,7 +14,7 @@ const GetCompanyProduct = asyncHandler(async (req, res) => {
 
   try {
 
-    const { id } = req.query;
+    const id = req.userId;
 
     if (!id) return res.status(400).json({ message: "ID is required" });
 
@@ -38,7 +38,7 @@ const GetCompanyProduct = asyncHandler(async (req, res) => {
 
 
 
-    const targetCompany = adminUser?.companyId?.[0];
+    const targetCompany = adminUser?.companyId;
 
     if (!targetCompany) return res.status(404).json({ message: "Company data not found" });
 
@@ -59,6 +59,7 @@ const GetCompanyProduct = asyncHandler(async (req, res) => {
     if (targetCompany.POSProductsId) {
 
       targetCompany.POSProductsId.forEach((prod) => {
+        console.log("prod  ",prod)
 
         if (prod && prod.sku) {
 
@@ -89,7 +90,6 @@ const GetCompanyProduct = asyncHandler(async (req, res) => {
     if (targetCompany.EcomerceProducts) {
 
       targetCompany.EcomerceProducts.forEach((prod) => {
-
         if (prod && prod.sku) {
 
           const ecomData = getCleanData(prod);
@@ -166,6 +166,7 @@ const GetCompanyProduct = asyncHandler(async (req, res) => {
 
       price: p.price,
 
+      categoryName:p.category,
       // THE MASTER QUANTITY
 
       quantity: p.availableStock,
@@ -188,7 +189,7 @@ const GetCompanyProduct = asyncHandler(async (req, res) => {
 
     });
 
-
+    console.log("Sync Completed: Products fetched and synchronized successfully.", result);
 
   } catch (error) {
 

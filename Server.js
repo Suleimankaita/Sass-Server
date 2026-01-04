@@ -10,6 +10,7 @@ const cluster = require("cluster");
 const os = require("os");
 const path = require("path");
 const http = require("http");
+const {Getproducts}=require("./Controllers/Getproducts")
 const { Server } = require("socket.io");
 const { initCustomerCare } = require('./Controllers/ticketSocket');
 // Sticky & Cluster Adapter Dependencies
@@ -26,6 +27,7 @@ const IS_PRODUCTION = process.env.NODE_ENV === 'production';
  * MASTER PROCESS
  * ==========================
  */
+
 if (cluster.isPrimary) {
     console.log(`[Master] PID: ${process.pid} running`);
 
@@ -39,9 +41,6 @@ if (cluster.isPrimary) {
     // Setup Cluster Adapter Primary
     setupPrimary();
 
-    httpServer.listen(PORT, () => {
-        console.log(`[Master] Gateway listening on port ${PORT}`);
-    });
 
     for (let i = 0; i < numCPUs; i++) {
         cluster.fork();
@@ -52,8 +51,9 @@ if (cluster.isPrimary) {
         setTimeout(() => cluster.fork(), 1000);
     });
 
-    return; 
+    return ; 
 }
+   
 
 /**
  * ==========================
@@ -74,8 +74,9 @@ const createError = require("http-errors");
 const multer = require("multer");
 // const os = require("os");
 const osu = require("os-utils");
+const origin= require("./Config/Origin");
 const { getDiskInfoSync } = require("node-disk-info");
-
+const corsOptions = require("./Config/Origin"); // import the full options object
 const connectDB = require("./Config/Connecton");
 const app = express();
 // FIX: Ensure req.query is available for sanitizers
@@ -87,33 +88,36 @@ const httpServer = http.createServer(app);
 // Connect to Database
 connectDB();
 
+app.use(cors(corsOptions));
 /**
  * 1. BASIC SECURITY & LOGGING
  */
-app.use(helmet());
+// app.use(helmet());
+app.use(
+  helmet({
+    crossOriginResourcePolicy: false,
+  })
+);
+app.use((req, res, next) => {
+  res.removeHeader("Cross-Origin-Resource-Policy");
+  res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+  next();
+});
+
 app.use(morgan(IS_PRODUCTION ? "combined" : "dev"));
 
 const allowedOrigins = [
-    "http://localhost:3000",
-    "http://localhost:5173",
-    process.env.CLIENT_URL
+     'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'https://your-production-domain.com'
 ];
 
-app.use(cors({
-    origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            callback(new Error("CORS Policy Violation"));
-        }
-    },
-    credentials: true,
-}));
+
 
 /**
  * 2. BODY PARSERS & SANITIZATION
  */
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true })); // Changed to true for nested objects
 app.use(cookieParser());
 app.use(compression());
@@ -139,6 +143,11 @@ const limiter = rateLimit({
 });
 app.use("/api", limiter);
 
+ httpServer.listen(PORT, () => {
+       return console.log(`[Master] Gateway listening on port ${PORT}`);
+    });
+
+
 /**
  * 3. SOCKET.IO SETUP (CLUSTERED)
  */
@@ -161,6 +170,10 @@ app.use((req, res, next) => {
 // Initialize ticket socket handlers
 
 initCustomerCare(io);
+// setInterval(() => {
+  
+  Getproducts(io);
+// }, 1000);
 
 io.on("connection", (socket) => {
     // connected to worker
@@ -274,13 +287,21 @@ app.get("/health", (req, res) => {
     res.status(200).json(healthCheck);
   });
 });
-
-
 const apiRoutes = express.Router();
+
+ 
+
+
+// app.use(require('./Middleware/Verify'))
 
 apiRoutes.use("/", require("./Routes/Root"));
 
 apiRoutes.use("/AddProducts",upload.array('file'), require("./Routes/AddProducts"));
+
+apiRoutes.use("/GetSale/", require("./Routes/GetSale"));
+apiRoutes.use("/Auth/", require("./Routes/refresh"));
+
+apiRoutes.use("/Sell", require("./Routes/Sell"));
 
 apiRoutes.use("/Auth/Login", require("./Routes/Auth"));
 
@@ -294,6 +315,8 @@ apiRoutes.use("/Transaction", require("./Routes/AddTransaction"));
 
 apiRoutes.use("/Settings/", require("./Routes/CompanySettings"));
 
+apiRoutes.use("/api/AdminAuth", require("./Routes/AdminAuth"));
+
 apiRoutes.use("/Auth/CompanyRegs",
 
     upload.fields([{ name: "Logo", maxCount: 1 }, { name: "CAC_img", maxCount: 1 }]),
@@ -304,7 +327,7 @@ apiRoutes.use("/Auth/CompanyRegs",
 
 apiRoutes.use("/food/", upload.single('file'), require("./Routes/FoodPrice"));
 
-apiRoutes.use("/api/CompanyUsersRegs", require("./Routes/CompanyUsersRegs"));
+apiRoutes.use("/CompanyUsersRegs", require("./Routes/CompanyUsersRegs"));
 
 apiRoutes.use("/Cart", require("./Routes/Cart"));
 
@@ -346,14 +369,23 @@ apiRoutes.use("/AddProducts", require("./Routes/AddProducts"));
 
 apiRoutes.use("/Logs", require("./Routes/Logs"));
 
-apiRoutes.use("/api", require("./Routes/mainRoutes"));
+apiRoutes.use("/api/", 
+    // upload.fields([{ name: "Logo", maxCount: 1 }, { name: "CAC_img", maxCount: 1 }]),
+    
+    require("./Routes/mainRoutes"));
 
 
 
 
+    
 
 
 app.use(apiRoutes);
+
+mongoose.connection.once("open", () => {
+    console.log(`[Worker ${process.pid}] Database connected & Ready`);
+});
+
 
 /**
  * 7. ERROR HANDLING
@@ -363,6 +395,14 @@ app.use((req, res, next) => {
 });
 
 app.use((err, req, res, next) => {
+    // RE-APPLY CORS HEADERS IN THE ERROR HANDLER
+    const origin = req.headers.origin;
+    if (allowedOrigins.includes(origin)) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
+  //  res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+      }
+
     const status = err.status || 500;
     res.status(status).json({
         success: false,
@@ -370,10 +410,6 @@ app.use((err, req, res, next) => {
         message: err.message || "Internal Server Error",
     });
 });
-
 /**
  * 8. START WORKER
  */
-mongoose.connection.once("open", () => {
-    console.log(`[Worker ${process.pid}] Database connected & Ready`);
-});
