@@ -25,12 +25,13 @@ const ProductSchema = new mongoose.Schema(
         default:()=>new Date().toLocaleTimeString()
       },
     },
+    
     price: Number,
    
     costPrice: Number,
 
     sku: { type: String, index: true },
-    barcode: { type: String, index: true },
+    barcode: { type: String, index: true ,default:()=>Math.floor(100000000000 + Math.random() * 900000000000).toString()},
     categoryName: String,
     quantity: { type: Number, default: 0 },
     reorderLevel: { type: Number, default: 5 },

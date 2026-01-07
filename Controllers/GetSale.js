@@ -15,7 +15,6 @@ const GetFilteredSales = asyncHandler(async (req, res) => {
 
     let resultData = {};
 
-    console.log(companyId,req.user)
     // 2. LOGIC FOR ADMIN / MANAGER (The "Deep" Search)
     if (Role === 'Admin' || Role === 'Manager') {
         if (!companyId) {
@@ -32,13 +31,12 @@ const GetFilteredSales = asyncHandler(async (req, res) => {
                 path: 'BranchId', // Level 1: Find all branches
                 populate: {
                     path: 'SaleId', // Level 2: "Go Deep" to find sales belonging to each branch
-                    model: 'SaleTransaction',
+                    model: 'Sale',
                     options: { sort: { saleDate: -1 } }
                 }
             })
             .lean();
 
-            console.log(resultData)
 
         if (!resultData) {
             return res.status(404).json({ success: false, message: "Company not found" });

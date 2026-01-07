@@ -13,24 +13,27 @@ const RegisterStaff = asyncHandler(async (req, res) => {
         const {
             Username, Password, Firstname, Lastname, Email,
             StreetName, PostalNumber, Lat, Long,
-            id,              // The Admin ID (Owner)
+                          // The Admin ID (Owner)
             targetId,        // The ID of the Company OR Branch
             type             // "company" or "branch"
         } = req.body;
-
+        const id=req.userId
         // 1. Validation
         if (!Username || !Password || !Firstname || !Lastname || !Email || !id || !targetId || !type) {
             return res.status(400).json({ message: 'All fields are required' });
         }
-
+        
         // 2. Check Username Uniqueness
         const existingUser = await CompanyUser.findOne({ Username })
-            .collation({ strength: 2, locale: 'en' });
+        .collation({ strength: 2, locale: 'en' });
         if (existingUser) return res.status(409).json({ message: 'Username already taken' });
-
+        
         // 3. Get the Admin to see their Companies
         // We only need the list of companyIds the admin owns
         const admin = await Admin.findById(id).select('companyId');
+
+        console.log(admin)
+        
         if (!admin) return res.status(401).json({ message: 'Admin not found' });
 
         let parentDocument = null; 
@@ -42,7 +45,7 @@ const RegisterStaff = asyncHandler(async (req, res) => {
         if (type.toLowerCase() === 'company') {
             
             // Check if the Admin's "companyId" array contains this targetId
-            const isOwner = admin.companyId.includes(targetId);
+            const isOwner = admin.companyId!==targetId
             
             if (!isOwner) {
                 return res.status(403).json({ message: 'Unauthorized: Admin does not own this Company' });

@@ -1,27 +1,32 @@
 const AdminBranch = require('../Models/AdminOwner');
-const asyncHandler = require("express-async-handler");
+const asyncHandler = require('express-async-handler');
 
 const GetAdminBranches = asyncHandler(async (req, res) => {
-  
-    const adminId = req.userId;
+  // 1. Validate userId early
+  if (!req.userId) {
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
 
-    const admin = await AdminBranch.findById(adminId)
-        .populate({
-            path: 'BranchId',
-            select: '-CompanyPassword' 
-        })
-        .lean();
-
-    if (!admin) {
-        return res.status(404).json({ message: "Admin account not found" });
-    }
-
-    const branches = admin.BranchId || [];
-
-    res.status(200).json({
-        count: branches.length,
-        branches: branches
+  const admin = await AdminBranch.findById(req.userId)
+    .populate({
+      path: 'companyId',
+      populate: {
+        path: 'BranchId',
+        model: 'Branch'
+      }
     });
+
+  if (!admin) {
+    return res.status(404).json({ message: 'Admin account not found' });
+  }
+
+  // 2. Correct branch extraction
+  const branches = admin.companyId?.BranchId || [];
+
+  return res.status(200).json({
+    count: branches.length,
+    branches
+  });
 });
 
-module.exports =  GetAdminBranches ;
+module.exports = GetAdminBranches;

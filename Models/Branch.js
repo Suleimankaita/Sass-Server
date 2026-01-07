@@ -27,7 +27,7 @@ const BranchSchema = new mongoose.Schema(
     DealsId: { type: mongoose.Schema.Types.ObjectId, ref: "DealProduct" },
     ownerId: { type: mongoose.Schema.Types.ObjectId, ref: "Admin" },
     CompanyUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "Company_User" }],
-    EcomerceProducts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Products" }],
+    EcomerceProducts: [{ type: mongoose.Schema.Types.ObjectId, ref: "EcomerceProducts" }],
     POSProductsId: [{ type: mongoose.Schema.Types.ObjectId, ref: "POSProducts" }],
     Orders: [{ type: mongoose.Schema.Types.ObjectId, ref: "Order" }],
     
@@ -35,6 +35,10 @@ const BranchSchema = new mongoose.Schema(
       type: String,
       enum: ["Free", "Basic", "Pro", "Enterprise"],
       default: "Free",
+    },
+    Date:{
+      type:String,
+      default:()=>new Date(),
     },
 
     expireAt: Date,

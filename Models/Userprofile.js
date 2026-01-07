@@ -42,6 +42,7 @@ const UserProfileSchema = new mongoose.Schema(
     // Orders & Tickets
     orders: [{ type: mongoose.Schema.Types.ObjectId, ref: "Order" }],
     tickets: [{ type: mongoose.Schema.Types.ObjectId, ref: "Ticket" }],
+        SaleId: [{ type: mongoose.Schema.Types.ObjectId, ref: "Sale" }],
 
     // Products & Cart
     ecommerceProducts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Products" }],

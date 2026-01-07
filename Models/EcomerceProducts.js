@@ -23,14 +23,18 @@ const EcomerceProducts = new mongoose.Schema(
           type:String,
           default:"Ecomerce"
         },
+        
     name: { type: String, required: true },
     description: String,
 
     price: Number,
     costPrice: Number,
+    soldAtPrice: { type: Number, required: true },
+    actualPrice: { type: Number, required: true },  
 
     sku: { type: String, index: true },
-    barcode: { type: String, index: true },
+        
+    barcode: { type: String, index: true,default:()=>Math.floor(100000000000 + Math.random() * 900000000000).toString() },
 
     categoryName: String,
 

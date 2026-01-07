@@ -21,10 +21,13 @@ const ProcessSale = asyncHandler(async (req, res) => {
             productId,
             quantity,
             soldAtPrice,
-            paymentMethod
+            actualPrice,
+            paymentMethod,
+            img
         } = req.body;
+        console.log(req.body)
 
-        if (!sellerId || !actorId || !productId || !quantity || !soldAtPrice) {
+        if (!img||!sellerId || !actorId || !productId || !quantity || !soldAtPrice||!actualPrice) {
             return res.status(400).json({ message: "Missing required sale data." });
         }
 
@@ -32,9 +35,10 @@ const ProcessSale = asyncHandler(async (req, res) => {
         let seller = await Branch.findById(sellerId) || await Company.findById(sellerId);
         let sellerType = (await Branch.exists({ _id: sellerId })) ? 'Branch' : 'Company';
         console.log(sellerType)
-        let actor = await Admin.findById(actorId) || await User.findById(actorId);
+        let actor = await Admin.findById(actorId) || await User.findById(actorId).populate('UserProfileId');
         let actorType = (await Admin.exists({ _id: actorId })) ? 'Admin' : 'User';
 
+        
         if (!seller || !actor) {
             return res.status(404).json({ message: "Seller or Authorized User not found." });
         }
@@ -76,6 +80,7 @@ const ProcessSale = asyncHandler(async (req, res) => {
         const newSale = await SaleTransaction.create({
             sellerId: seller._id,
             sellerModel: sellerType,
+            img,
             actorDetails: {
                 id: actor._id,
                 name: actor.Firstname || actor.Username || actor.CompanyName || 'Unknown',
@@ -86,7 +91,7 @@ const ProcessSale = asyncHandler(async (req, res) => {
                 productId: productData._id,
                 name: productData.name,
                 normalPrice: productData.price,
-                actualPrice: productData.price,
+                actualPrice,
                 quantity: quantity,
                 soldAtPrice,
             // }],
@@ -104,6 +109,10 @@ const ProcessSale = asyncHandler(async (req, res) => {
 
         }
 
+        if(actorType==="User"){
+         actor.UserProfileId.SaleId.push(newSale._id)   
+        }
+
         await Logs.create({
             actorId: actor._id,
             actorRole: actorType,
@@ -114,6 +123,7 @@ const ProcessSale = asyncHandler(async (req, res) => {
             }
         });
         await seller.save()
+        await actor.UserProfileId.save()
         res.status(201).json({
             success: true,
             message: "Sale processed and stock updated across platforms.",

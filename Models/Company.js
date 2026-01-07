@@ -8,7 +8,7 @@ const CompanySchema = new mongoose.Schema(
     CompanySettingsId: { type: mongoose.Schema.Types.ObjectId, ref: "CompanySettings" },
     TransactionId: [{ type: mongoose.Schema.Types.ObjectId, ref: "Transaction" }],
     CompanyUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "Company_User" }],
-    EcomerceProducts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Products" }],
+    EcomerceProducts: [{ type: mongoose.Schema.Types.ObjectId, ref: "EcomerceProducts" }],
     POSProductsId: [{ type: mongoose.Schema.Types.ObjectId, ref: "POSProducts" }],
     POSSell: [{ type: mongoose.Schema.Types.ObjectId, ref: "PosSell" }],
     CategoriesId: [{ type: mongoose.Schema.Types.ObjectId, ref: "CateGories" }],

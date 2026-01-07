@@ -42,10 +42,8 @@ exports.refreshToken = asyncHandler(async (req, res) => {
   
   const { id, Role, companyId,Username } = payload?.UserInfo;
   
-  console.log(Role)
   // 🔍 Resolve account dynamically
   const account = await resolveAccount(Role, id);
-  console.log(account.companyId._id)
 
   if (!account) {
     return res.status(401).json({ message: "Account not found" });
@@ -75,7 +73,6 @@ exports.refreshToken = asyncHandler(async (req, res) => {
   }
   // console.log(payload)
   // 🔐 Refresh token match
-    console.log(refreshToken+"\n",account)
 
   if (account.UserProfileId?.token !== refreshToken) {
     return res.status(401).json({ message: "Token mismatch" });
@@ -89,8 +86,6 @@ exports.refreshToken = asyncHandler(async (req, res) => {
                  companyId
                  
             }});
-  console.log(newAccessToken)
-  console.log(payload?.UserInfo)
   const newRefreshToken = signRefreshToken({UserInfo: {
                 Username,
                 Role,

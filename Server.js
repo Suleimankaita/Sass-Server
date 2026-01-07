@@ -11,6 +11,7 @@ const os = require("os");
 const path = require("path");
 const http = require("http");
 const {Getproducts}=require("./Controllers/Getproducts")
+const {GetBranchproducts}=require("./Controllers/GetBranchProducts")
 const { Server } = require("socket.io");
 const { initCustomerCare } = require('./Controllers/ticketSocket');
 // Sticky & Cluster Adapter Dependencies
@@ -108,6 +109,7 @@ app.use(morgan(IS_PRODUCTION ? "combined" : "dev"));
 
 const allowedOrigins = [
      'http://localhost:5173',
+     'http://172.20.10.2:5173',
   'http://127.0.0.1:5173',
   'https://your-production-domain.com'
 ];
@@ -117,6 +119,14 @@ const allowedOrigins = [
 /**
  * 2. BODY PARSERS & SANITIZATION
  */
+
+app.use((req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true })); // Changed to true for nested objects
 app.use(cookieParser());
@@ -143,7 +153,7 @@ const limiter = rateLimit({
 });
 app.use("/api", limiter);
 
- httpServer.listen(PORT, () => {
+ httpServer.listen(PORT,'0.0.0.0', () => {
        return console.log(`[Master] Gateway listening on port ${PORT}`);
     });
 
@@ -170,12 +180,13 @@ app.use((req, res, next) => {
 // Initialize ticket socket handlers
 
 initCustomerCare(io);
+Getproducts(io);
 // setInterval(() => {
+  GetBranchproducts(io);
   
-  Getproducts(io);
-// }, 1000);
-
-io.on("connection", (socket) => {
+  // }, 1000);
+  
+  io.on("connection", (socket) => {
     // connected to worker
 });
 
@@ -299,9 +310,14 @@ apiRoutes.use("/", require("./Routes/Root"));
 apiRoutes.use("/AddProducts",upload.array('file'), require("./Routes/AddProducts"));
 
 apiRoutes.use("/GetSale/", require("./Routes/GetSale"));
+
+apiRoutes.use("/GetSingleProduct", require("./Routes/GetSingleProduct"));
+
 apiRoutes.use("/Auth/", require("./Routes/refresh"));
 
 apiRoutes.use("/Sell", require("./Routes/Sell"));
+
+apiRoutes.use("/GetAllSales", require("./Routes/GetAllSale"));
 
 apiRoutes.use("/Auth/Login", require("./Routes/Auth"));
 
@@ -333,7 +349,7 @@ apiRoutes.use("/Cart", require("./Routes/Cart"));
 
 apiRoutes.use("/Deals", require("./Routes/Deals"));
 
-apiRoutes.use("/Branch", require("./Routes/CreateBranch"));
+apiRoutes.use("/CreateBranch", require("./Routes/CreateBranch"));
 
 apiRoutes.use("/Notifications", require("./Routes/Notifications"));
 
@@ -348,6 +364,7 @@ apiRoutes.use("/DeleteCategory", require("./Routes/DeleteCategory"));
 apiRoutes.use("/GetTotalUsers", require("./Routes/GetAllcompanyUsers"));
 
 apiRoutes.use("/Get/Branch", require("./Routes/GetBranch"));
+apiRoutes.use("/Get/GetBranchUsers", require("./Routes/GetBranchUsers"));
 
 apiRoutes.use("/api/CompanyUserAuth", require("./Routes/CompanyUsersAuth"));
 

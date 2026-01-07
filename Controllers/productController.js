@@ -4,78 +4,83 @@ const POSProducts = require('../Models/POSProduct');
 const Order = require('../Models/User_order');
 const Admin = require('../Models/AdminOwner');
 const Logs = require('../Models/UserLog');
-const User = require('../Models/User');
+const User = require('../Models/CompanyUsers');
 const Company = require('../Models/Company');
+const Branch = require('../Models/Branch');
 
 /**
  * 🟢 ADD PRODUCT
  */
 const ProductRegs = asyncHandler(async (req, res) => {
-  const { name, description, price, quantity, Selection, id, sku, barcode, costPrice, category, reorderLevel,CompanyId,categoryName } = req.body;
+  const { 
+    name, description, price, quantity, Selection, id, sku, barcode, 
+    costPrice, category, reorderLevel, CompanyId, categoryName, 
+    soldAtPrice, actualPrice 
+  } = req.body;
+
   const files = req.files;
-  console.log(files)
+
   // 1. Validation
-  if (!name || !price || !quantity || !Selection || !id||!CompanyId||!categoryName) {
+  if (!name || !quantity || !Selection || !id || !CompanyId || !categoryName || !soldAtPrice || !actualPrice) {
     return res.status(400).json({ message: 'All required fields must be provided' });
   }
 
-  // 2. Identify Actor (Person) AND Target (Company)
-  let actingUser = null; // The person performing the action (for logs/names)
-  let targetCompany = null; // The company document to save the product arrays to
-  let actorRole = null;
-
-  // Check if Admin
-  const admin = await Admin.findById(id);
-  if (admin) {
-    actingUser = admin;
-    // targetCompany = admin.companyId; // Products belong to the Company
-    actorRole = 'ADMIN';
+  // 2. Identify the Actor (Admin or Staff User)
+  const adminActor = await Admin.findById(id);
+  const userActor = !adminActor ? await User.findById(id).populate('UserProfileId') : null;
+  
+  const actingUser = adminActor || userActor;
+  if (!actingUser) {
+    return res.status(404).json({ message: 'User or Admin not found' });
   }
 
-  const companyFound=await Company.findById(CompanyId)
-  console.log(companyFound)
-  if(!companyFound)return res.status(404).json({message:'Company Not Found'}) 
+  const actorRole = adminActor ? 'ADMIN' : 'USER';
 
-      if(companyFound) {
-         targetCompany = await Company.findById(CompanyId);
-      }
-  // Check if User (Staff)
-  if (!actingUser) {
-    const user = await User.findById(id).populate('UserProfileId'); // Assuming UserProfileId links to staff details
-    // Note: You need logic here to find WHICH company the user belongs to. 
-    // Assuming for now the user is linked to a company, or we pass companyId in body.
-    // For this fix, I will assume we find the company via the user's profile or request.
-    if (user) {
-      actingUser = user; 
-      actorRole = 'USER';
-      // TODO: Ensure you fetch the correct company for this user. 
-      // For now, I'll assume we might need to look it up or pass it. 
-      // If user doesn't have companyId, this will fail. Let's assume passed in body or linked.
-    
+  // 3. Identify the Target (Company or Branch)
+  let targetEntity = await Company.findById(CompanyId);
+  let entityType = 'Company';
+
+  if (!targetEntity) {
+    targetEntity = await Branch.findById(CompanyId);
+    entityType = 'Branch';
+  }
+
+  if (!targetEntity) {
+    return res.status(404).json({ message: 'Target Company or Branch not found' });
+  }
+
+  // 4. Authorization Check: Is this User a member of this Company/Branch?
+  if (actorRole === 'USER') {
+    // Check if the user's ID exists in the target entity's companyUsers array
+    // We use .toString() to compare MongoDB ObjectIds
+    const isMember = targetEntity.CompanyUsers && targetEntity.CompanyUsers.some(
+      (userId) => userId.toString() === actingUser._id.toString()
+    );
+
+    console.log(isMember)
+    if (!isMember) {
+      return res.status(403).json({ 
+        message: `Access Denied: You are not authorized to add products to this ${entityType}` 
+      });
     }
   }
 
-  if (!targetCompany) {
-    return res.status(404).json({ message: 'Target Company not found for this user/admin' });
-  }
-
-  // 3. Prepare Shared Data (Crucial for Merging)
-  // We MUST have a consistent SKU to link POS and Ecom versions later
+  // 5. Prepare Product Data
   const finalSku = sku || `SKU-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-
-  const imgPaths = files && Array.isArray(files) 
-    ? files.map(file => file.filename) // Adjust based on your upload middleware (Multer/Cloudinary)
-    : [];
+  const imgPaths = files && Array.isArray(files) ? files.map(file => file.filename) : [];
 
   const baseProductData = {
-    companyId: targetCompany._id, // Link product to company
+    companyId: targetEntity._id,
+    entityType: entityType,
     name,
     description,
-    price,
+   price: Number(price) || 0,
     categoryName,
-    costPrice,
-    quantity,
-    sku: finalSku, // Shared SKU
+    costPrice: Number(costPrice) || 0,
+    soldAtPrice: Number(soldAtPrice) || 0,
+    actualPrice: Number(actualPrice) || 0,
+    quantity: Number(quantity) || 0,
+    sku:Number(finalSku),
     barcode,
     category,
     reorderLevel,
@@ -89,63 +94,42 @@ const ProductRegs = asyncHandler(async (req, res) => {
     },
   };
 
+  // 6. Create Product Documents
   let createdProducts = {};
 
-  // 4. Create Documents based on Selection
-  
-  // --- POS Creation ---
   if (Selection === 'POS Only' || Selection === 'Both Platforms') {
-    const posProduct = await POSProducts.create({
-      ...baseProductData,
-      ChangeLog: "POS"
-    });
-    
-    // Push to Company Array
-    if (!targetCompany.POSProductsId) targetCompany.POSProductsId = [];
-    targetCompany.POSProductsId.push(posProduct._id);
+    const posProduct = await POSProducts.create({ ...baseProductData, ChangeLog: "POS" });
+    if (!targetEntity.POSProductsId) targetEntity.POSProductsId = [];
+    targetEntity.POSProductsId.push(posProduct._id);
     createdProducts.POS = posProduct;
   }
 
-  // --- E-commerce Creation ---
   if (Selection === 'E-commerce Only' || Selection === 'Both Platforms') {
-    const ecommerceProduct = await EcomerceProducts.create({
-      ...baseProductData,
-      ChangeLog: "Ecomerce"
-    });
-
-    // Push to Company Array
-    if (!targetCompany.EcomerceProducts) targetCompany.EcomerceProducts = [];
-    targetCompany.EcomerceProducts.push(ecommerceProduct._id);
+    const ecommerceProduct = await EcomerceProducts.create({ ...baseProductData, ChangeLog: "Ecomerce" });
+    if (!targetEntity.EcomerceProducts) targetEntity.EcomerceProducts = [];
+    targetEntity.EcomerceProducts.push(ecommerceProduct._id);
     createdProducts.ECOMMERCE = ecommerceProduct;
   }
 
-  // 5. Save Company (Updates the arrays)
-  await targetCompany.save();
+  // 7. Save Entity and Log
+  await targetEntity.save();
 
-  // 6. Logging
   await Logs.create({
     actorId: actingUser._id,
     actorRole,
-    actorName: actingUser.Firstname || actingUser.Username,
     action: 'PRODUCT_CREATED',
     platform: Selection,
-    metadata: {
-      productName: name,
-      sku: finalSku,
-      price,
-      quantity,
-    },
+    metadata: { productName: name, targetName: targetEntity.name, entityType },
     date: new Date().toISOString(),
-    time: new Date().toLocaleTimeString(),
   });
 
   res.status(201).json({
-    message: `Product '${name}' published successfully`,
+    message: `Product '${name}' added to ${entityType} successfully`,
+    foundIn: entityType,
     sku: finalSku,
     products: createdProducts,
   });
 });
-
 /**
  * 🟢 CREATE ORDER
  */

@@ -10,17 +10,17 @@ const CreateBranch = asyncHandler(async (req, res) => {
         CompanyPassword, id, CompanyEmail, targetCompanyId 
     } = req.body;
 
-    // 1. Find the Admin and verify the company belongs to them
-    // We check if targetCompanyId exists inside the Admin's companyId array
+    // 1. Find the Admin and verify the company match
+    // Based on your schema, companyId is a single ObjectId, not an array
     const foundAdmin = await AdminOwner.findById(id);
     
     if (!foundAdmin) {
         return res.status(401).json({ message: 'Admin not found' });
     }
 
-    const ownsCompany = foundAdmin.companyId.includes(targetCompanyId);
-    if (!ownsCompany) {
-        return res.status(403).json({ message: 'This company does not belong to this Admin' });
+    // Verify if the targetCompanyId matches the Admin's registered companyId
+    if (foundAdmin.companyId.toString() !== targetCompanyId) {
+        return res.status(403).json({ message: 'Unauthorized: This company is not linked to this Admin account' });
     }
 
     // 2. Find the Company and populate existing branches for duplicate checking
@@ -29,23 +29,21 @@ const CreateBranch = asyncHandler(async (req, res) => {
         return res.status(404).json({ message: 'Company record not found' });
     }
 
+
     // 3. Duplicate Check: Ensure branch name doesn't exist in THIS specific company
-    const isDuplicate = targetCompany.BranchId.some(
+    const isDuplicate = targetCompany.BranchId && targetCompany.BranchId.some(
         branch => branch.CompanyName?.toLowerCase() === CompanyName.toLowerCase()
     );
+
     if (isDuplicate) {
         return res.status(409).json({ message: 'Branch name already exists in this company' });
     }
 
-    // 4. Hash the password
-    // const hashedPassword = await bcrypt.hash(CompanyPassword, 10);
-
-    // 5. Create the Branch
-    // Note: We are not storing ownerId here as requested
+    // 4. Create the Branch (Bcrypt removed as requested)
     const newBranch = await Branch.create({
         CompanyName,
         CompanyEmail,
-        CompanyPassword,
+        CompanyPassword, // Stored as plain text per request
         Address: {
             StreetName: street,
             PostalNumber: postalNumber,
@@ -54,21 +52,24 @@ const CreateBranch = asyncHandler(async (req, res) => {
         }
     });
 
-    // 6. UPDATE HIERARCHY: Link Branch to Company
+    // 5. UPDATE HIERARCHY: Link Branch to Company
     targetCompany.BranchId.push(newBranch._id);
     await targetCompany.save();
 
-    // 7. LOGGING: Link Log to Admin
+    // 6. LOGGING: Create log and link to Admin using UserLogId array
     const log = await UserLog.create({
-        action: `Created branch: ${CompanyName} for Company: ${targetCompany.CompanyName}`,
+        action: `Created branch: ${CompanyName}`,
+        details: `Branch added to Company: ${targetCompany.CompanyName}`,
         Username: foundAdmin.Username,
     });
 
-    foundAdmin.UserLogs.push(log._id);
+    // Update Admin's UserLogId array (matching your schema field name)
+    foundAdmin.UserLogId.push(log._id);
     await foundAdmin.save();
 
     res.status(201).json({ 
-        message: `Branch successfully linked to ${targetCompany.CompanyName}`,
+        success: true,
+        message: `Branch successfully created and linked to ${targetCompany.CompanyName}`,
         branchId: newBranch._id 
     });
 });

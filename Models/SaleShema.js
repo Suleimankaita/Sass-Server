@@ -15,6 +15,7 @@ const ProductSchema = new mongoose.Schema({
         type:String,
         default:()=>new Date().toLocaleTimeString()
     },
+    img:String,
     actualPrice: { type: Number, required: true }  
   
 });
