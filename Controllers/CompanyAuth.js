@@ -10,9 +10,11 @@ const CompanyAuth = asynchandler(async (req, res) => {
     if (!Username || !Password)
       return res.status(400).json({ message: 'All fields are required' });
 
-    const found = await User.findOne({ Username }).populate("UserProfileId").exec();
+    const found = await User.findOne({ Username }).populate("UserProfileId").populate("companyId").exec();
     if (!found)
       return res.status(400).json({ message: 'User not found' });
+
+    console.log(found)
 
     if (!found.Active)
       return res.status(403).json({
@@ -27,7 +29,9 @@ const CompanyAuth = asynchandler(async (req, res) => {
         UserInfo: {
           Username: found.Username,
           Role: found.Role,
-          id: found._id
+          id: found._id,
+          companyName:found?.companyId?.companyName
+
           
         }
       },
@@ -40,7 +44,9 @@ const CompanyAuth = asynchandler(async (req, res) => {
         UserInfo: {
           Username: found.Username,
           Role: found.Role,
-          id: found._id
+          id: found._id,
+          companyName:found?.companyId?.companyName
+
         }
       },
       process.env.REFRESH_TOKEN_SECRET,

@@ -10,6 +10,7 @@ const asyncHandler = require('express-async-handler');
 const DeleteCategory = asyncHandler(async (req, res) => {
     const { id, targetCompanyId, categoryId, CompanyName } = req.body;
 
+    console.log(req.body)
     // 1. Validation
     if (!id || !targetCompanyId || !categoryId) {
         return res.status(400).json({ message: 'User ID, Target Company ID, and Category ID are required' });
@@ -41,8 +42,7 @@ const DeleteCategory = asyncHandler(async (req, res) => {
     const foundAdmin = await AdminOwner.findById(id);
 
     if (foundAdmin) {
-        const ownsEntity = foundAdmin.companyId?.some((cid) => cid.toString() === targetCompanyId) || 
-                           targetEntity.ownerId?.toString() === id;
+        const ownsEntity = foundAdmin.companyId?.toString() === targetCompanyId||targetEntity.ownerId?.toString() === id;
         
         if (!ownsEntity) return res.status(403).json({ message: `Unauthorized: Admin does not own this ${entityLabel}` });
         

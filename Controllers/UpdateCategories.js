@@ -10,6 +10,7 @@ const asyncHandler = require('express-async-handler');
 const UpdateCategories = asyncHandler(async (req, res) => {
     const { name, id, targetCompanyId, CompanyName, categoryId } = req.body;
 
+    console.log(req.body)
     // 1. Basic Validation
     if (!name || !id || !targetCompanyId || !CompanyName || !categoryId) {
         return res.status(400).json({ message: 'Missing required fields' });
@@ -54,8 +55,7 @@ const UpdateCategories = asyncHandler(async (req, res) => {
     const foundAdmin = await AdminOwner.findById(id).exec();
 
     if (foundAdmin) {
-        const ownsEntity = foundAdmin.companyId?.some((cid) => cid.toString() === targetCompanyId) || 
-                           targetEntity.ownerId?.toString() === id;
+        const ownsEntity = foundAdmin.companyId?.toString() === targetCompanyId ||targetEntity.ownerId?.toString() === id;
 
         if (!ownsEntity) {
             return res.status(403).json({ message: `Access denied: Admin does not own this ${entityLabel}` });

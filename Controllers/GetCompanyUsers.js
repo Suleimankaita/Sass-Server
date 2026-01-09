@@ -77,13 +77,19 @@ const GetAllCompanyUsers = asyncHandler(async (req, res) => {
     const company = await Company.findById(targetId)
         .populate({
             path: 'CompanyUsers',
-            populate: { path: 'UserProfileId' } // Assuming this exists in Company_User
+                       populate: [
+                { path: 'LogId',model: 'UserLog' }, 
+                { path: 'UserProfileId',model: 'UserProfile' }
+            ]
         })
         .populate({
             path: 'BranchId',
             populate: {
                 path: 'CompanyUsers',
-                populate: { path: 'UserProfileId' }
+             populate: [
+                { path: 'LogId',model: 'UserLog' }, 
+                { path: 'UserProfileId',model: 'UserProfile' }
+            ]
             }
         });
 
@@ -94,8 +100,8 @@ const GetAllCompanyUsers = asyncHandler(async (req, res) => {
     // 2. Extract users from the Company level
     const directUsers = company.CompanyUsers || [];
 
-    // 3. Extract and flatten users from all Branches
-    const branchUsers = company.BranchId.reduce((acc, branch) => {
+    // 3. Extract and flatten users from all Branches (guard if BranchId is undefined)
+    const branchUsers = (company.BranchId || []).reduce((acc, branch) => {
         return acc.concat(branch.CompanyUsers || []);
     }, []);
 
@@ -105,6 +111,7 @@ const GetAllCompanyUsers = asyncHandler(async (req, res) => {
     // 5. Remove duplicates (if a user is in both lists)
     const uniqueUsers = Array.from(new Map(allUsers.map(user => [user._id.toString(), user])).values());
 
+    console.log(`Total unique users found: ${uniqueUsers}`);
     res.status(200).json({
         success: true,
         count: uniqueUsers.length,

@@ -9,6 +9,7 @@ const asyncHandler = require('express-async-handler');
 const AddCategories = asyncHandler(async (req, res) => {
     const { name, id, targetCompanyId, CompanyName } = req.body;
 
+    console.log(req.body)
     if (!name || !id || !targetCompanyId || !CompanyName) {
         return res.status(400).json({ message: 'Missing required fields' });
     }
@@ -36,7 +37,7 @@ const AddCategories = asyncHandler(async (req, res) => {
     if (foundAdmin) {
         // Check if Admin owns the entity directly OR if it's in their companyId list
         const isDirectOwner = targetEntity.ownerId?.toString() === id;
-        const isInCompanyList = foundAdmin.companyId?.some((cid) => cid.toString() === targetCompanyId);
+        const isInCompanyList = foundAdmin.companyId?.toString() === targetCompanyId;
 
         if (!isDirectOwner && !isInCompanyList) {
             return res.status(403).json({ message: `Access denied: You do not own this ${entityLabel}` });

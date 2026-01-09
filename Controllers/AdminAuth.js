@@ -11,7 +11,7 @@ const Auth = asynchandler(async (req, res) => {
         console.log(req.body)
         if (!Username || !Password) return res.status(400).json({ message: 'Username and Password are required' });
 
-        const found = await User.findOne({ Username }).populate('UserProfileId').exec();
+        const found = await User.findOne({ Username }).populate('UserProfileId').populate("companyId").exec();
         console.log(found)
         if (!found) return res.status(404).json({ message: 'User not found' });
 
@@ -42,7 +42,9 @@ const Auth = asynchandler(async (req, res) => {
                 Username: found.Username,
                 Role: found.Role,
                 id: found._id,
-                companyId:found.companyId
+                companyId:found?.companyId._id,
+          companyName:found?.companyId?.CompanyName
+
             },
         };
 

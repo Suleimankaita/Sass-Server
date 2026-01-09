@@ -10,7 +10,7 @@ const CompanyAuth = asynchandler(async (req, res) => {
     if (!Username || !Password)
       return res.status(400).json({ message: 'All fields are required' });
 
-    const found = await User.findOne({ Username }).populate('UserProfileId').exec();
+    const found = await User.findOne({ Username }).populate('LogId').populate('UserProfileId').exec();
     console.log(found)
     if (!found)
       return res.status(400).json({ message: 'User not found' });

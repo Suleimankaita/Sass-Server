@@ -40,7 +40,7 @@ exports.refreshToken = asyncHandler(async (req, res) => {
   }
 
   
-  const { id, Role, companyId,Username } = payload?.UserInfo;
+  const { id, Role, companyId,Username,companyName } = payload?.UserInfo;
   
   // 🔍 Resolve account dynamically
   const account = await resolveAccount(Role, id);
@@ -83,13 +83,16 @@ exports.refreshToken = asyncHandler(async (req, res) => {
                 Username,
                 Role,
                  id:id,
-                 companyId
+                 companyId,
+                 companyName
                  
             }});
   const newRefreshToken = signRefreshToken({UserInfo: {
                 Username,
                 Role,
-                 id:id||companyId,
+                 id:id,
+                 companyId,
+                 companyName
             }});
   
   account.refreshToken = newRefreshToken;

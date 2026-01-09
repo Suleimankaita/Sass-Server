@@ -179,15 +179,15 @@ app.use((req, res, next) => {
 
 // Initialize ticket socket handlers
 
-initCustomerCare(io);
-Getproducts(io);
-// setInterval(() => {
-  GetBranchproducts(io);
-  
-  // }, 1000);
-  
-  io.on("connection", (socket) => {
-    // connected to worker
+
+io.on("connection", (socket) => {
+  // connected to worker
+  // setInterval(() => {
+    initCustomerCare(io);
+    Getproducts(io);
+    GetBranchproducts(io);
+    // }, 1000);
+    
 });
 
 /**
@@ -311,6 +311,8 @@ apiRoutes.use("/AddProducts",upload.array('file'), require("./Routes/AddProducts
 
 apiRoutes.use("/GetSale/", require("./Routes/GetSale"));
 
+apiRoutes.use("/UpdateCompanyUser",upload.single('file'), require("./Routes/UpdateCompanyUser"));
+
 apiRoutes.use("/GetSingleProduct", require("./Routes/GetSingleProduct"));
 
 apiRoutes.use("/Auth/", require("./Routes/refresh"));
@@ -360,6 +362,8 @@ apiRoutes.use("/AddCategories", require("./Routes/AddCategories"));
 apiRoutes.use("/UpdateCategories", require("./Routes/UpdateCategories"));
 
 apiRoutes.use("/DeleteCategory", require("./Routes/DeleteCategory"));
+
+apiRoutes.use("/GetCategories", require("./Routes/GetCategory"));
 
 apiRoutes.use("/GetTotalUsers", require("./Routes/GetAllcompanyUsers"));
 

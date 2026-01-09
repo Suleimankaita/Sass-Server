@@ -20,8 +20,10 @@ const ProductRegs = asyncHandler(async (req, res) => {
 
   const files = req.files;
 
+  console.log(req.body)
+  console.log(req.files)
   // 1. Validation
-  if (!name || !quantity || !Selection || !id || !CompanyId || !categoryName || !soldAtPrice || !actualPrice) {
+  if (!name || !quantity ||!barcode|| !Selection || !id || !CompanyId || !categoryName || !soldAtPrice || !actualPrice) {
     return res.status(400).json({ message: 'All required fields must be provided' });
   }
 
@@ -66,7 +68,7 @@ const ProductRegs = asyncHandler(async (req, res) => {
   }
 
   // 5. Prepare Product Data
-  const finalSku = sku || `SKU-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+  // const finalSku = sku || `SKU-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
   const imgPaths = files && Array.isArray(files) ? files.map(file => file.filename) : [];
 
   const baseProductData = {
@@ -80,8 +82,8 @@ const ProductRegs = asyncHandler(async (req, res) => {
     soldAtPrice: Number(soldAtPrice) || 0,
     actualPrice: Number(actualPrice) || 0,
     quantity: Number(quantity) || 0,
-    sku:Number(finalSku),
-    barcode,
+    // sku:Number(finalSku),
+    barcode:Number(barcode),
     category,
     reorderLevel,
     img: imgPaths,
@@ -126,7 +128,7 @@ const ProductRegs = asyncHandler(async (req, res) => {
   res.status(201).json({
     message: `Product '${name}' added to ${entityType} successfully`,
     foundIn: entityType,
-    sku: finalSku,
+    // sku: finalSku,
     products: createdProducts,
   });
 });

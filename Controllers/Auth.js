@@ -12,7 +12,7 @@ const Auth = asynchandler(async (req, res) => {
         console.log(req.body)
         if (!Username || !Password) return res.status(400).json({ message: 'Username and Password are required' });
 
-        const found = await User.findOne({ Username }).populate('UserProfileId').exec();
+        const found = await User.findOne({ Username }).populate('UserProfileId');
         if (!found) return res.status(404).json({ message: 'User not found' });
 
         if (found.Active === false) return res.status(403).json({ message: 'Account suspended. Contact support.' });

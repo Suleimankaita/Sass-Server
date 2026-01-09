@@ -8,12 +8,11 @@ const Admin = require("../Models/AdminOwner");
 const Getproducts = (io) => {
   io.on('connection', (socket) => {
     try {
-      socket.on("GetId", async ({ id, page = 1, limit = 5 }) => {
+      socket.on("GetId", async ({ id, page = 1, limit = 15 }) => {
         console.log("Fetching for Company ID:", id);
 
         if (!id) return socket.emit("Error", { message: "Company ID is required" });
 
-        // 1. Fetch Company directly (Removed Admin lookup)
         const targetCompany = await Company.findById(id)
           .populate("POSProductsId")
           .populate("EcomerceProducts");

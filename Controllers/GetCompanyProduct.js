@@ -165,6 +165,7 @@ const GetCompanyProduct = asyncHandler(async (req, res) => {
       category: p.category,
 
       price: p.price,
+      soldAtprice: p.soldAtprice,
 
       categoryName:p.category,
       // THE MASTER QUANTITY

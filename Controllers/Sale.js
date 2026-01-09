@@ -27,7 +27,7 @@ const ProcessSale = asyncHandler(async (req, res) => {
         } = req.body;
         console.log(req.body)
 
-        if (!img||!sellerId || !actorId || !productId || !quantity || !soldAtPrice||!actualPrice) {
+        if (!img||!sellerId || !actorId || !productId || !quantity || !soldAtPrice) {
             return res.status(400).json({ message: "Missing required sale data." });
         }
 
@@ -91,7 +91,7 @@ const ProcessSale = asyncHandler(async (req, res) => {
                 productId: productData._id,
                 name: productData.name,
                 normalPrice: productData.price,
-                actualPrice,
+                actualPrice:productData?.actualPrice,
                 quantity: quantity,
                 soldAtPrice,
             // }],
@@ -123,7 +123,7 @@ const ProcessSale = asyncHandler(async (req, res) => {
             }
         });
         await seller.save()
-        await actor.UserProfileId.save()
+        await actor.save()
         res.status(201).json({
             success: true,
             message: "Sale processed and stock updated across platforms.",
