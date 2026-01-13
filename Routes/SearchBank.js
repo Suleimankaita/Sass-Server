@@ -1,11 +1,11 @@
     const express=require("express")
-    const Sell=require("../Controllers/Sale")
+    const {resolveAccount}=require("../Controllers/List_banks")
 const Verify=require('../Middleware/Verify')
 
     const route=express.Router()
 
 
     route.route('/')
-    .post(Verify,Sell)
+    .post(resolveAccount)
 
     module.exports=route

@@ -11,6 +11,7 @@ const ProductSchema = new mongoose.Schema({
     productType:String,
     Categorie:String,
     quantity:Number,
+    TransactionType:String,
     Time:{
         type:String,
         default:()=>new Date().toLocaleTimeString()

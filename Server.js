@@ -13,6 +13,7 @@ const http = require("http");
 const {Getproducts}=require("./Controllers/Getproducts")
 const {GetBranchproducts}=require("./Controllers/GetBranchProducts")
 const { Server } = require("socket.io");
+const socketController=require("./Controllers/UpdateDeliveryProduct");
 const { initCustomerCare } = require('./Controllers/ticketSocket');
 // Sticky & Cluster Adapter Dependencies
 const { setupMaster, setupWorker } = require("@socket.io/sticky");
@@ -179,7 +180,7 @@ app.use((req, res, next) => {
 
 // Initialize ticket socket handlers
 
-
+socketController(io);
 io.on("connection", (socket) => {
   // connected to worker
   // setInterval(() => {
@@ -310,6 +311,8 @@ apiRoutes.use("/", require("./Routes/Root"));
 apiRoutes.use("/AddProducts",upload.array('file'), require("./Routes/AddProducts"));
 
 apiRoutes.use("/GetSale/", require("./Routes/GetSale"));
+apiRoutes.use("/SearchBank", require("./Routes/SearchBank"));
+apiRoutes.use("/PayOutCheckout", require("./Routes/PayOutTransaction"));
 
 apiRoutes.use("/UpdateCompanyUser",upload.single('file'), require("./Routes/UpdateCompanyUser"));
 
@@ -331,7 +334,7 @@ apiRoutes.use("/Products/", require("./Routes/GetComapnyProduct"));
 
 apiRoutes.use("/Transaction", require("./Routes/AddTransaction"));
 
-apiRoutes.use("/Settings/", require("./Routes/CompanySettings"));
+apiRoutes.use("/Settings/", upload.single('companyLogo'), require("./Routes/CompanySettings"));
 
 apiRoutes.use("/api/AdminAuth", require("./Routes/AdminAuth"));
 
@@ -376,7 +379,11 @@ apiRoutes.use("/api/CompanyAuth", require("./Routes/CompanyAuth"));
 
 apiRoutes.use("/Get/GetAdminCompany", require("./Routes/GetAdmincompany"));
 
-apiRoutes.use("/api/User/Order", require("./Routes/Order"));
+apiRoutes.use("/User/Order", require("./Routes/Order"));
+
+apiRoutes.use("/updateOrderStatus", require("./Routes/UpdateOrder"));
+
+apiRoutes.use("/UserOrders", require("./Routes/GetUserOrders"));
 
 apiRoutes.use("/api/Verify/CompanyVeried", require("./Routes/VerifyCompany"));
 

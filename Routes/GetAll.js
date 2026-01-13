@@ -2,8 +2,9 @@
 const express = require('express');
 const router = express.Router();
 const { getAllAdmins, getAdminById } = require('../Controllers/get');
+const Verify = require('../Middleware/Verify');
 
-router.get('/', getAllAdmins);
-router.get('/:id', getAdminById);
+router.get('/', Verify,getAllAdmins);
+router.get('/:id', Verify,getAdminById);
 
 module.exports = router;

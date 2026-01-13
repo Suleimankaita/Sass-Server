@@ -4,13 +4,13 @@ const Verify = require('../Middleware/Verify');
 const PriceController = require('../Controllers/FoodPrice');
 
 // Create a price (protected)
-router.post('/', PriceController.createPrice);
+router.post('/', Verify,PriceController.createPrice);
 
 // Get a single price by id
-router.get('/:id', PriceController.getPrice);
+router.get('/:id', Verify,PriceController.getPrice);
 
 // List prices (optional query: companyId, active)
-router.get('/', PriceController.listPrices);
+router.get('/', Verify,PriceController.listPrices);
 
 // Update price (protected)
 router.put('/:id', Verify, PriceController.updatePrice);

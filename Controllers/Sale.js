@@ -23,11 +23,12 @@ const ProcessSale = asyncHandler(async (req, res) => {
             soldAtPrice,
             actualPrice,
             paymentMethod,
-            img
+            img,
+            TransactionType
         } = req.body;
         console.log(req.body)
 
-        if (!img||!sellerId || !actorId || !productId || !quantity || !soldAtPrice) {
+        if (!img||!sellerId || !actorId || !productId || !quantity || !soldAtPrice||!TransactionType) {
             return res.status(400).json({ message: "Missing required sale data." });
         }
 
@@ -81,6 +82,7 @@ const ProcessSale = asyncHandler(async (req, res) => {
             sellerId: seller._id,
             sellerModel: sellerType,
             img,
+            TransactionType,
             actorDetails: {
                 id: actor._id,
                 name: actor.Firstname || actor.Username || actor.CompanyName || 'Unknown',

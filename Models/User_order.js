@@ -17,10 +17,10 @@ const OrderSchema = new mongoose.Schema(
 
     items: [
       {
-        productId: { type: mongoose.Schema.Types.ObjectId, ref: "Products" },
+        productId: { type: mongoose.Schema.Types.ObjectId, ref: "EcomerceProducts" },
         ProductName: String,
         ProductImg: [String],
-        Price: Number,
+        soldAtPrice: Number,
         quantity: Number,
         sku: String,      // Added for OrderDetailsPage
         variant: String,  // Added for OrderDetailsPage

@@ -4,6 +4,6 @@ const Verify=require('../Middleware/Verify')
 const route=express.Router()
 
 route.route('/')
-.get(getCategories)
+.get(Verify,getCategories)
 
 module.exports=route

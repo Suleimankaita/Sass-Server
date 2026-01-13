@@ -1,5 +1,6 @@
 const express=require("express")
 const Auth = require("../Controllers/Auth")
+const Verify=require('../Middleware/Verify')
 
 const route=express.Router()
 

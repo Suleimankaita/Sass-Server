@@ -3,96 +3,95 @@ const Company = require('../Models/Company');
 const Branch = require('../Models/Branch');
 const asyncHandler = require('express-async-handler');
 const mongoose = require('mongoose');
+const ensureSettings = require("../utils/ensureSettings");
 
 // @desc    Get Settings for a specific Entity (Company or Branch)
 // @route   GET /api/settings?targetId=...
-// @access  Private
 const GetSettings = asyncHandler(async (req, res) => {
-    const { targetId } = req.query; // This can be a CompanyID OR a BranchID
+  const { targetId } = req.query;
 
-    if (!targetId || !mongoose.Types.ObjectId.isValid(targetId)) {
-        return res.status(400).json({ message: "Valid Target ID is required" });
-    }
+  if (!targetId || !mongoose.Types.ObjectId.isValid(targetId)) {
+    return res.status(400).json({ message: "Valid Target ID is required" });
+  }
 
-    // 1. Try to find settings by Company ID
-    let settings = await Settings.findOne({ companyId: targetId });
+  // 1. Check if Target is a Company
+  const company = await Company.findById(targetId);
+  if (company) {
+    const settings = await ensureSettings({ companyId: company._id });
+    return res.status(200).json(settings);
+  }
 
-    // 2. If not found, try to find settings by Branch ID
-    if (!settings) {
-        settings = await Settings.findOne({ branchId: targetId });
-    }
+  // 2. Check if Target is a Branch
+  const branch = await Branch.findById(targetId);
+  if (branch) {
+    const branchSettings = await ensureSettings({ branchId: branch._id });
+    const companySettings = await ensureSettings({ companyId: branch.companyId });
 
-    // 3. If still not found, return defaults (safe fallback)
-    if (!settings) {
-        // Check if the entity actually exists to be sure
-        const isCompany = await Company.findById(targetId);
-        const isBranch = !isCompany && await Branch.findById(targetId);
+    // Merge (Branch settings override Company settings)
+    const resolvedSettings = {
+      ...companySettings.toObject(),
+      ...branchSettings.toObject(),
+    };
 
-        if (!isCompany && !isBranch) {
-            return res.status(404).json({ message: "Target Entity not found" });
-        }
+    return res.status(200).json(resolvedSettings);
+  }
 
-        // Return default structure (frontend will handle the "empty" state)
-        return res.status(200).json({
-            businessName: isCompany ? isCompany.CompanyName : isBranch.CompanyName,
-            vatEnabled: true,
-            primaryCurrency: 'USD ($)',
-            copiesPerReceipt: 1
-        });
-    }
-
-    res.status(200).json(settings);
+  return res.status(404).json({ message: "Target Entity not found" });
 });
 
 // @desc    Update or Create Settings
 // @route   PUT /api/settings
-// @access  Private
 const UpdateSettings = asyncHandler(async (req, res) => {
-    const { targetId, ...settingsData } = req.body;
+  // 1. Parse the stringified settings object from FormData
+  let settings;
+  console.log("Parsed Settings:", req.body);
+  try {
+    settings = req.body.settings ? JSON.parse(req.body.settings) : null;
+  } catch (error) {
+    return res.status(400).json({ message: "Invalid settings format" });
+  }
+  const { targetId } = req.body;
 
-    if (!targetId || !mongoose.Types.ObjectId.isValid(targetId)) {
-        return res.status(400).json({ message: "Valid Target ID is required" });
+  if (!targetId || !mongoose.Types.ObjectId.isValid(targetId)) {
+    return res.status(400).json({ message: "Valid Target ID is required" });
+  }
+
+  if (!settings) {
+    return res.status(400).json({ message: "No settings data provided" });
+  }
+
+  // 2. Strip protected fields
+  const { _id, createdAt, updatedAt, __v, companyId, branchId, ...updateData } = settings;
+
+  // 3. Handle the Logo File (If Multer uploaded a file)
+  if (req.file) {
+    // Store the path to the image. 
+    // Example: 'uploads/logos/filename.jpg'
+    updateData.companyLogo = req.file.filename;
+  }
+
+  // 4. Determine Query (Company vs Branch)
+  const isCompany = await Company.exists({ _id: targetId });
+  let query = isCompany ? { companyId: targetId } : { branchId: targetId };
+
+  // 5. Update Database
+  const updatedDoc = await Settings.findOneAndUpdate(
+    query,
+    { $set: updateData },
+    {
+      new: true,
+      upsert: true, // Creates the doc if it doesn't exist
+      runValidators: true,
     }
+  );
 
-    // 1. Determine if Target is Company or Branch
-    let query = {};
-    let updateField = {};
-
-    const isCompany = await Company.findById(targetId);
-    
-    if (isCompany) {
-        query = { companyId: targetId };
-        updateField = { companyId: targetId, branchId: null }; // Ensure mutual exclusivity
-    } else {
-        const isBranch = await Branch.findById(targetId);
-        if (isBranch) {
-            query = { branchId: targetId };
-            updateField = { branchId: targetId, companyId: null };
-        } else {
-            return res.status(404).json({ message: "Target Entity (Company or Branch) not found" });
-        }
-    }
-
-    // 2. Upsert Settings (Create if new, Update if exists)
-    const updatedSettings = await Settings.findOneAndUpdate(
-        query,
-        { 
-            $set: {
-                ...settingsData,
-                ...updateField
-            } 
-        },
-        { new: true, upsert: true, runValidators: true }
-    );
-
-    res.status(200).json({
-        success: true,
-        message: `${isCompany ? 'Company' : 'Branch'} settings updated successfully`,
-        settings: updatedSettings
-    });
+  res.status(200).json({
+    success: true,
+    message: "Settings updated successfully",
+    settings: updatedDoc,
+  });
 });
-
 module.exports = {
-    GetSettings,
-    UpdateSettings
+  GetSettings,
+  UpdateSettings
 };

@@ -1,11 +1,10 @@
 const express=require("express")
-const Auth = require("../Controllers/CompanyAuth")
+const { getUserOrders } = require("../Controllers/Order")
 const Verify=require('../Middleware/Verify')
 
 const route=express.Router()
 
 
-route.route('/')
-.post(Auth)
+route.get('/:id', Verify,getUserOrders)
 
 module.exports=route

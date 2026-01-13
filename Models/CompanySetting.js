@@ -1,52 +1,81 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-const SettingsSchema = new mongoose.Schema({
-    // Link to EITHER a Company OR a Branch
+const SettingsSchema = new mongoose.Schema(
+  {
+    // ======================
+    // Ownership (ONE only)
+    // ======================
     companyId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Company',
-        default: null
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Company",
+      default: null,
     },
-    branchId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Branch',
-        default: null
-    },
-    
-    // --- Identity ---
-    businessName: { type: String, default: '' },
-    address: { type: String, default: '' },
-    companyLogo: { type: String, default: null }, 
 
-    // --- Financials ---
+    branchId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Branch",
+      default: null,
+    },
+
+    // ======================
+    // Identity
+    // ======================
+    businessName: { type: String, default: "K S limited" },
+    address: { type: String, default: "Address, City" },
+    companyLogo: { type: String, default: null },
+
+    // ======================
+    // Financials
+    // ======================
     vatEnabled: { type: Boolean, default: true },
-    vatRate: { type: Number, default: 15.0 },
+    vatRate: { type: Number, default: 15 },
     defaultTaxRateBase: { type: Number, default: 15 },
-    primaryCurrency: { type: String, default: 'USD ($)' },
-    secondaryCurrency: { type: String, default: 'EUR (€)' },
+
+    primaryCurrency: { type: String, default: "USD ($)" },
+    secondaryCurrency: { type: String, default: "EUR (€)" },
     showCurrencySymbol: { type: Boolean, default: false },
 
-    // --- Operations ---
+    // ======================
+    // Operations
+    // ======================
     copiesPerReceipt: { type: Number, default: 1 },
     showCompanyLogoReceipt: { type: Boolean, default: true },
     showItemImagesReceipt: { type: Boolean, default: false },
-    selectedPrinter: { type: String, default: 'Default Printer' },
-    
-    // --- Security ---
-    enableTimeRestrictions: { type: Boolean, default: false },
-    loginStartTime: { type: String, default: '08:00' },
-    loginEndTime: { type: String, default: '22:00' },
-    
-    disallowedUsersEnabled: { type: Boolean, default: false },
-    disallowedUsersList: [{ type: String }], // List of emails/names
+    selectedPrinter: { type: String, default: "Local PDF Printer" },
 
-    backupFrequency: { type: String, enum: ['Daily', 'Weekly', 'Monthly'], default: 'Daily' }
-}, {
-    timestamps: true 
+    // ======================
+    // Security
+    // ======================
+    enableTimeRestrictions: { type: Boolean, default: true },
+    loginStartTime: { type: String, default: "08:00" },
+    loginEndTime: { type: String, default: "22:00" },
+
+    disallowedUsersEnabled: { type: Boolean, default: true },
+    disallowedUsersList: { type: [String], default: [] },
+
+    // ======================
+    // Data Management
+    // ======================
+    backupFrequency: {
+      type: String,
+      enum: ["Daily", "Weekly", "Monthly"],
+      default: "Daily",
+    },
+  },
+  { timestamps: true }
+);
+SettingsSchema.pre("validate", function (next) {
+  const hasCompany = !!this.companyId;
+  const hasBranch = !!this.branchId;
+
+  if (hasCompany === hasBranch) {
+    return next(
+      new Error(
+        "Settings must belong to exactly ONE: companyId OR branchId"
+      )
+    );
+  }
+
+  next();
 });
-
-// Prevent duplicate settings for the same entity
-SettingsSchema.index({ companyId: 1 }, { unique: true, partialFilterExpression: { companyId: { $exists: true, $ne: null } } });
-SettingsSchema.index({ branchId: 1 }, { unique: true, partialFilterExpression: { branchId: { $exists: true, $ne: null } } });
-
-module.exports = mongoose.model('Settings', SettingsSchema);
+module.exports = mongoose.model("CompanySetting", SettingsSchema);
