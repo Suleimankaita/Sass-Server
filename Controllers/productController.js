@@ -47,6 +47,7 @@ const ProductRegs = asyncHandler(async (req, res) => {
     entityType = 'Branch';
   }
 
+  console.log(entityType)
   if (!targetEntity) {
     return res.status(404).json({ message: 'Target Company or Branch not found' });
   }

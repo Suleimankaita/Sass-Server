@@ -5,6 +5,8 @@ const route=express.Router()
 
 
 route.route('/')
-.post(verify,CompanyUsersRegs)
+.post(
+    verify,
+    CompanyUsersRegs)
 
 module.exports=route

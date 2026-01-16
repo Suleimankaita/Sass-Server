@@ -56,7 +56,7 @@ const CompanyAuth = asynchandler(async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
-     found.UserProfileId.token=accessToken 
+     found.UserProfileId.token=refreshToken 
 
     const logEntry = await Logss.create({
       name: found.Firstname,
@@ -69,7 +69,8 @@ const CompanyAuth = asynchandler(async (req, res) => {
     if (!found.LogId) found.LogId = [];
     found.LogId.push(logEntry._id);
     await found.save();
-    await found.UserProfileId.save()
+        await found.UserProfileId.save()
+
 
     
 

@@ -24,6 +24,7 @@ const CompanyUserSchema = new mongoose.Schema(
       ref: "Company",
       index: true
     },
+    walletBalance: { type: [Number], default: 0 },
 
     Address: {
       StreetName: String,
@@ -36,8 +37,10 @@ const CompanyUserSchema = new mongoose.Schema(
     Role: {
       type: String,
       enum: ["admin","manager", "cashier", "inventory", "rider", "staff"],
-      default: "staff",
+      default: "cashier",
     },
+    WalletNumber: Number,
+
 
     LogId: [{ type: mongoose.Schema.Types.ObjectId, ref: "UserLog" }],
 

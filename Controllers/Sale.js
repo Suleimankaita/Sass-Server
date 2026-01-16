@@ -36,7 +36,7 @@ const ProcessSale = asyncHandler(async (req, res) => {
         let seller = await Branch.findById(sellerId) || await Company.findById(sellerId);
         let sellerType = (await Branch.exists({ _id: sellerId })) ? 'Branch' : 'Company';
         console.log(sellerType)
-        let actor = await Admin.findById(actorId) || await User.findById(actorId).populate('UserProfileId');
+        let actor = await Admin.findById(actorId).populate('UserProfileId') || await User.findById(actorId).populate('UserProfileId');
         let actorType = (await Admin.exists({ _id: actorId })) ? 'Admin' : 'User';
 
         
@@ -105,9 +105,11 @@ const ProcessSale = asyncHandler(async (req, res) => {
         /* 5. LINK SALE & LOGS */
         if (sellerType === 'Branch') {
             seller.SaleId.push(newSale._id); // Changed from newSale[0]
+            actor?.UserProfileId.SaleId.push(newSale._id); // Changed from newSale[0]
             await seller.save();
         }else if (sellerType === 'Company'){
             seller.SaleId.push(newSale._id); // Changed from newSale[0]
+            actor?.UserProfileId.SaleId.push(newSale._id); // Changed from newSale[0]
 
         }
 
@@ -125,7 +127,7 @@ const ProcessSale = asyncHandler(async (req, res) => {
             }
         });
         await seller.save()
-        await actor.save()
+        await actor?.UserProfileId?.save()
         res.status(201).json({
             success: true,
             message: "Sale processed and stock updated across platforms.",

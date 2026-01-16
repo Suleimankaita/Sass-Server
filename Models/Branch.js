@@ -21,6 +21,9 @@ const BranchSchema = new mongoose.Schema(
         index: true,
         sparse: true 
     },
+    WalletNumber: Number,
+    walletBalance: { type: [Number], default: 0 },
+
         SaleId: [{ type: mongoose.Schema.Types.ObjectId, ref: "Sale" }],
         TransactionId: [{ type: mongoose.Schema.Types.ObjectId, ref: "Transaction" }],
     CompanySettingsId: { type: mongoose.Schema.Types.ObjectId, ref: "CompanySettings" },

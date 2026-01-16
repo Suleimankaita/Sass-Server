@@ -7,6 +7,7 @@ const User = require("../Models/User");
 const Company = require("../Models/Company");
 
 const { signAccessToken, signRefreshToken } = require("../utils/token");
+const Branch = require("../Models/Branch");
 
 // 🔁 Role → Model resolver
 const resolveAccount = async (role, id) => {
@@ -14,8 +15,11 @@ const resolveAccount = async (role, id) => {
   switch (role) {
     case "Admin":
       return Admin.findById(id).populate('companyId').populate("UserProfileId").select("+refreshToken Active Verified ");
-    case "Company_user":
-      return CompanyUser.findById(id).select("+refreshToken Active CompanyId");
+    // case 'manager'||'staff'||'cashier':
+    case 'cashier':
+      return CompanyUser.findById(id).populate("UserProfileId");
+    case 'manager':
+      return CompanyUser.findById(id).populate("UserProfileId");
     case "User":
       return User.findById(id).populate('UserProfileId').select("+refreshToken Active UserProfileId");
     default:
@@ -42,8 +46,10 @@ exports.refreshToken = asyncHandler(async (req, res) => {
   
   const { id, Role, companyId,Username,companyName } = payload?.UserInfo;
   
+  console.log(refreshToken)
   // 🔍 Resolve account dynamically
   const account = await resolveAccount(Role, id);
+  console.log(account)
 
   if (!account) {
     return res.status(401).json({ message: "Account not found" });
@@ -60,7 +66,7 @@ exports.refreshToken = asyncHandler(async (req, res) => {
   
   // 🏢 Company subscription validation
   if (Role === "company_user"||account.companyId||account.companyId._id) {
-    const company = await Company.findById(account.companyId||account.companyId._id);
+    const company = await Company.findById(account.companyId||account.companyId._id)|| await Branch.findById(account.companyId||account.companyId._id);
     if (!company) {
       return res.status(403).json({ message: "Company not found" });
     }

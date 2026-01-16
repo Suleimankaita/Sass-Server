@@ -4,20 +4,22 @@ const Order = require("../Models/User_order");
 const asyncHandler = require("express-async-handler");
 const Company = require("../Models/Company");
 const Admin = require("../Models/AdminOwner");
+const Branch = require("../Models/Branch");
 
 const Getproducts = (io) => {
   io.on('connection', (socket) => {
     try {
       socket.on("GetId", async ({ id, page = 1, limit = 15 }) => {
-        console.log("Fetching for Company ID:", id);
+        console.log("Fetching for Company ID Or Branch:", id);
 
         if (!id) return socket.emit("Error", { message: "Company ID is required" });
 
         const targetCompany = await Company.findById(id)
           .populate("POSProductsId")
+          .populate("EcomerceProducts")||await Branch.findById(id).populate("POSProductsId")
           .populate("EcomerceProducts");
 
-        if (!targetCompany) return socket.emit("Error", { message: "Company data not found" });
+        if (!targetCompany) return socket.emit("Error", { message: "Company data or Branch not found" });
 
         const productsMap = new Map();
         const getCleanData = (item) => (item._doc ? item._doc : item);

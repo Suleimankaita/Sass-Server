@@ -51,7 +51,7 @@ const UserProfileSchema = new mongoose.Schema(
 
     // Wallet / Balance
     walletNumber: { type: Number, default: null },
-    walletBalance: { type: Number, default: 0 },
+    walletBalance: { type: [Number], default: 0 },
     companySuspense: { type: Boolean, default: false },
 
     // User Activity / System

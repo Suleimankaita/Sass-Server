@@ -18,7 +18,7 @@ const GetFilteredSales = asyncHandler(async (req, res) => {
     let resultData = {};
 
     // 2. LOGIC FOR ADMIN / MANAGER (Company + Branch Sales)
-    if (Role === 'Admin' || Role === 'Manager') {
+    if (Role === 'Admin' || Role === 'manager') {
         if (!companyId) {
             return res.status(400).json({ success: false, message: "Company ID is required" });
         }
@@ -44,16 +44,7 @@ const GetFilteredSales = asyncHandler(async (req, res) => {
                     }
                 }
             })
-            .lean();
-
-        if (!resultData) {
-            return res.status(404).json({ success: false, message: "Company not found" });
-        }
-    } 
-    
-    // 3. LOGIC FOR BRANCH USER (Single Branch View)
-    else {
-        resultData = await Branch.findById(branchId)
+            .lean()||await Branch.findById(companyId)
             .populate({
                 path: 'SaleId',
                 options: { 
@@ -63,7 +54,25 @@ const GetFilteredSales = asyncHandler(async (req, res) => {
                 }
             })
             .lean();
-            
+
+        if (!resultData) {
+            return res.status(404).json({ success: false, message: "Company not found" });
+        }
+    } 
+    
+    // 3. LOGIC FOR BRANCH USER (Single Branch View)
+    else {
+        resultData = await Branch.findById(companyId)
+            .populate({
+                path: 'SaleId',
+                options: { 
+                    sort: { saleDate: -1 },
+                    limit: limit,
+                    skip: skip
+                }
+            })
+            .lean();
+            console.log(334444 ,resultData)
         if (!resultData) {
             return res.status(404).json({ success: false, message: "Branch not found" });
         }

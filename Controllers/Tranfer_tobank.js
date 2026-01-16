@@ -6,7 +6,7 @@ const PAYSTACK_SECRET_KEY = 'sk_live_8881e5914c026b0962911655cdeb45fc8fb47bd5';
 const transferToBank = asynchandler(async (req, res) => {
   try {
     const { name, code, account_number, amount } = req.body;
-    console.log(req.body)
+    // console.log(req.body)
 
     if (!name || !code || !account_number || !amount) {
       return res.status(400).json({ message: "Missing required transfer data." });
@@ -48,10 +48,11 @@ const transferToBank = asynchandler(async (req, res) => {
       }
     );
 
-    console.log(transferRes.data);
+    console.log('man ', transferRes.data);
     res.status(201).json({ message: transferRes.data });
 
   } catch (error) {
+    console.log('Error during transfer to bank:',  error.message);
     res.status(400).json({
       message: error.response?.data?.message || error.message
     });

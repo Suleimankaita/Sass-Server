@@ -65,6 +65,7 @@
 // module.exports = { GetStaffMembers };
 const asyncHandler = require('express-async-handler');
 const Company = require('../Models/Company');
+const Branch = require('../Models/Branch');
 
 const GetAllCompanyUsers = asyncHandler(async (req, res) => {
     const { targetId } = req.query; // This is the Company ID
@@ -91,6 +92,13 @@ const GetAllCompanyUsers = asyncHandler(async (req, res) => {
                 { path: 'UserProfileId',model: 'UserProfile' }
             ]
             }
+        })||await Branch.findById(targetId)
+        .populate({
+            path: 'CompanyUsers',
+                       populate: [
+                { path: 'LogId',model: 'UserLog' }, 
+                { path: 'UserProfileId',model: 'UserProfile' }
+            ]
         });
 
     if (!company) {

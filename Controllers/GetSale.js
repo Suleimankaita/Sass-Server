@@ -16,7 +16,7 @@ const GetFilteredSales = asyncHandler(async (req, res) => {
     let resultData = {};
 
     // 2. LOGIC FOR ADMIN / MANAGER (The "Deep" Search)
-    if (Role === 'Admin' || Role === 'Manager') {
+    if (Role === 'Admin' || Role === 'manager') {
         if (!companyId) {
             return res.status(400).json({ success: false, message: "Company ID is required for Admins" });
         }
@@ -35,6 +35,11 @@ const GetFilteredSales = asyncHandler(async (req, res) => {
                     options: { sort: { saleDate: -1 } }
                 }
             })
+            .lean()||await Branch.findById(companyId)
+            .populate({
+                path: 'SaleId',
+                options: { sort: { saleDate: -1 } }
+            })
             .lean();
 
 
@@ -46,7 +51,7 @@ const GetFilteredSales = asyncHandler(async (req, res) => {
     // 3. LOGIC FOR BRANCH USER (Limited View)
     else {
         // If it's a branch user, we only "go deep" into their specific branch
-        resultData = await Branch.findById(branchId)
+        resultData = await Branch.findById(branchId||companyId)
             .populate({
                 path: 'SaleId',
                 options: { sort: { saleDate: -1 } }

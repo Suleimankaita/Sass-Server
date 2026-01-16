@@ -11,6 +11,7 @@ const os = require("os");
 const path = require("path");
 const http = require("http");
 const {Getproducts}=require("./Controllers/Getproducts")
+const {GetUserSaleData}=require("./Controllers/GetUserSaleData")
 const {GetBranchproducts}=require("./Controllers/GetBranchProducts")
 const { Server } = require("socket.io");
 const socketController=require("./Controllers/UpdateDeliveryProduct");
@@ -18,7 +19,9 @@ const { initCustomerCare } = require('./Controllers/ticketSocket');
 // Sticky & Cluster Adapter Dependencies
 const { setupMaster, setupWorker } = require("@socket.io/sticky");
 const { createAdapter, setupPrimary } = require("@socket.io/cluster-adapter");
-
+const admin=require('./Models/AdminOwner')
+const User=require('./Models/User')
+const CompanyUsers=require('./Models/CompanyUsers')
 // --- Configuration ---
 const PORT = process.env.PORT || 3500;
 const numCPUs = os.cpus().length;
@@ -80,6 +83,11 @@ const origin= require("./Config/Origin");
 const { getDiskInfoSync } = require("node-disk-info");
 const corsOptions = require("./Config/Origin"); // import the full options object
 const connectDB = require("./Config/Connecton");
+const Company = require("./Models/Company");
+const Branch = require("./Models/Branch");
+const Transaction = require("./Models/transactions");
+const asyncHandler=require('express-async-handler')
+const bodyParser=require('body-parser')
 const app = express();
 // FIX: Ensure req.query is available for sanitizers
 app.set('query parser', 'extended'); 
@@ -186,6 +194,7 @@ io.on("connection", (socket) => {
   // setInterval(() => {
     initCustomerCare(io);
     Getproducts(io);
+    GetUserSaleData(io);
     GetBranchproducts(io);
     // }, 1000);
     
@@ -306,6 +315,101 @@ const apiRoutes = express.Router();
 
 // app.use(require('./Middleware/Verify'))
 
+app.post(
+  "/paystack/webhook",
+  bodyParser.raw({ type: "*/*" }),
+  asyncHandler(async (req, res) => {
+    console.log("✅ Paystack Webhook triggered!");
+
+    // log entire body to debug
+    console.log("🧾 RAW BODY (buffer):", req.body);
+    try {
+      if (!req.body || !req.body.length) {
+        console.log("❌ Empty body received");
+        return res.sendStatus(200);
+      }
+
+      const secret = process.env.PAYSTACK_KEY;
+      const signature = req.headers["x-paystack-signature"];
+
+      if (!signature) {
+        console.log("❌ Missing Paystack signature");
+        return res.sendStatus(400);
+      }
+
+      // Verify signature
+      const hash = crypto
+        .createHmac("sha512", secret)
+        .update(req.body)
+        .digest("hex");
+
+      if (hash !== signature) {
+        console.log("❌ Invalid signature");
+        return res.sendStatus(400);
+      }
+
+// Parse the raw body buffer into JSON
+const event = JSON.parse(req.body.toString());
+console.log("🔥 Event Type:", event.event);
+console.log("📦 Event Data:", event.data);
+
+// ✅ Handle Transfer Success
+if (event.data.status === "success") {
+  const { amount, reference, authorization, metadata } = event.data;
+
+  // ✅ Get receiver account number correctly for dedicated NUBAN
+  const account_no = metadata?.receiver_account_number || authorization?.receiver_bank_account_number;
+  console.log("💳 Account to credit:", account_no);
+
+  if (!account_no) {
+    console.log("⚠️ No account number in metadata");
+    return res.sendStatus(200);
+  }
+
+  // ✅ Find the user in your database
+  const user = await User.findOne({WalletNumber:account_no }).populate('UserProfileId').exec()||admin.findOne({     WalletNumber:account_no }).populate('UserProfileId').exec()||CompanyUsers.findOne({WalletNumber:account_no }).populate('UserProfileId').exec()||Company.findOne({WalletNumber:account_no }).exec()||Branch.findOne({WalletNumber:account_no }).exec();
+  if (!user) {
+    console.log("⚠️ User not found for account:", account_no);
+    return res.sendStatus(200);
+  }
+
+  // ✅ Convert kobo to naira
+  const creditAmount = amount / 100;
+
+  // ✅ Push new wallet entry
+  user.WalletBalance.push(creditAmount);
+
+  // ✅ Add transaction record
+   const transac =await Transaction.create({
+    from: authorization?.sender_name || "Unknown Sender",
+    to: user.account_name,
+    status: "successful",
+    product_name: "Wallet Funding",
+    sender_bank: authorization?.sender_bank,
+    sender_name: authorization?.sender_name,
+    amount: creditAmount,
+    type: "credit",
+    Date: new Date().toLocaleDateString(),
+    Time: new Date().toLocaleTimeString(),
+    referenceId: reference,
+  });
+
+  await user.save();
+
+  console.log(`✅ Wallet credited ₦${creditAmount} for ${user.account_name}`);
+}
+
+    res.sendStatus(200);
+      
+
+    } catch (err) {
+      console.error("⚠️ Webhook Error:", err.message);
+      res.sendStatus(500);
+    }
+  })
+);
+
+
 apiRoutes.use("/", require("./Routes/Root"));
 
 apiRoutes.use("/AddProducts",upload.array('file'), require("./Routes/AddProducts"));
@@ -317,6 +421,10 @@ apiRoutes.use("/PayOutCheckout", require("./Routes/PayOutTransaction"));
 apiRoutes.use("/UpdateCompanyUser",upload.single('file'), require("./Routes/UpdateCompanyUser"));
 
 apiRoutes.use("/GetSingleProduct", require("./Routes/GetSingleProduct"));
+
+apiRoutes.use("/logout", require("./Routes/LogOut"));
+
+apiRoutes.use("/LogOutAll", require("./Routes/LogOutAll"));
 
 apiRoutes.use("/Auth/", require("./Routes/refresh"));
 
