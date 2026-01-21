@@ -9,9 +9,11 @@ const RegisterStaff = asyncHandler(async (req, res) => {
     const {
         Username, Password, Firstname, Lastname, Email,
         StreetName, PostalNumber, Lat, Long,
+        Role,
         targetId // No more 'type' required
     } = req.body;
     
+    console.log(Role)
     const userId = req.userId;
 
     // 1. Validation
@@ -47,12 +49,13 @@ const RegisterStaff = asyncHandler(async (req, res) => {
 
     let parentDocument = null;
     let parentType = ""; // Will be 'company' or 'branch'
+    let company = null; // Track the company for user limit check
 
     // Try finding as Company first
-    const company = await Company.findOne({ _id: targetId });
+    const foundCompany = await Company.findOne({ _id: targetId });
     
     // Verify that the requester has access to this company
-    if (company) {
+    if (foundCompany) {
         if (isAdmin) {
             // Admin must own this company
             const companyOwned = await Company.findOne({ _id: targetId, _id: { $in: requester.companyId } });
@@ -65,8 +68,9 @@ const RegisterStaff = asyncHandler(async (req, res) => {
                 return res.status(403).json({ message: 'Unauthorized - Manager must belong to same company' });
             }
         }
-        parentDocument = company;
+        parentDocument = foundCompany;
         parentType = "company";
+        company = foundCompany;
     } else {
         // Try finding as Branch (The branch must belong to a company owned by this admin)
         const branchOwnedByAdmin = await Branch.findOne({
@@ -78,6 +82,11 @@ const RegisterStaff = asyncHandler(async (req, res) => {
         if (branchOwnedByAdmin) {
             parentDocument = await Branch.findById(targetId);
             parentType = "branch";
+            
+            // Find the company that owns this branch
+            company = await Company.findOne({
+                BranchId: { $in: [targetId] }
+            });
         }
     }
 
@@ -85,8 +94,22 @@ const RegisterStaff = asyncHandler(async (req, res) => {
         return res.status(403).json({ message: 'Unauthorized or Target ID not found' });
     }
 
+    // 5. Check user limits based on subscription
+    if (!company) {
+        return res.status(404).json({ message: 'Company not found for this target' });
+    }
 
-    // 4. Create User Profile
+    if (company.usersCreated >= company.maxUsers) {
+        return res.status(403).json({
+            message: `User limit reached. You have created ${company.usersCreated} out of ${company.maxUsers} allowed users for your ${company.subscriptionPlan} plan.`,
+            usersCreated: company.usersCreated,
+            maxUsers: company.maxUsers,
+            subscriptionPlan: company.subscriptionPlan,
+            upgrade: 'Please upgrade your subscription plan to create more users'
+        });
+    }
+
+    // 6. Create User Profile
     const newProfile = await Profile.create({
         Firstname, Lastname, Email,
         Address: { StreetName, PostalNumber, Lat, Long },
@@ -96,11 +119,12 @@ const RegisterStaff = asyncHandler(async (req, res) => {
     // if(parentType==='branch'){
     // }
     try {
-        // 5. Create Staff User
+        // 7. Create Staff User
         let staffData = {
             Username,
             Password, // Note: Should be hashed in production
             UserProfileId: newProfile._id,
+            Role
         };
 
         // Set company and branch IDs based on parent type
@@ -116,9 +140,16 @@ const RegisterStaff = asyncHandler(async (req, res) => {
 
         const newStaffUser = await CompanyUser.create(staffData);
 
-        // 6. Link User to Parent Document (Company or Branch)
+        // 8. Link User to Parent Document (Company or Branch)
         parentDocument.CompanyUsers = parentDocument.CompanyUsers || [];
         parentDocument.CompanyUsers.push(newStaffUser._id);
+        
+        // 9. Increment user counter on company
+        if (company) {
+            company.usersCreated += 1;
+            await company.save();
+        }
+        
         await parentDocument.save();
 
         res.status(201).json({
@@ -127,7 +158,9 @@ const RegisterStaff = asyncHandler(async (req, res) => {
             data: {
                 userId: newStaffUser._id,
                 linkedTo: parentType,
-                targetId: targetId
+                targetId: targetId,
+                usersCreated: company.usersCreated,
+                maxUsers: company.maxUsers
             }
         });
 

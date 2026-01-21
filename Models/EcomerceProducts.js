@@ -7,6 +7,11 @@ const EcomerceProducts = new mongoose.Schema(
       ref: "Company",
       index: true,
     },
+    branchId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Branch",
+      index: true,
+    },
      UserUpload:{
           name:String,
           Username:String,

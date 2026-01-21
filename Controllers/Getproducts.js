@@ -1,73 +1,73 @@
-const EcomerceProducts = require("../Models/EcomerceProducts");
-const POSProduct = require("../Models/POSProduct");
-const Order = require("../Models/User_order");
-const asyncHandler = require("express-async-handler");
 const Company = require("../Models/Company");
-const Admin = require("../Models/AdminOwner");
 const Branch = require("../Models/Branch");
 
 const Getproducts = (io) => {
   io.on('connection', (socket) => {
-    try {
-      socket.on("GetId", async ({ id, page = 1, limit = 15 }) => {
-        console.log("Fetching for Company ID Or Branch:", id);
+    socket.on("GetId", async ({ id, page = 1, limit = 15 }) => {
+      try {
+        console.log("Fetching paginated products for ID:", id);
+        if (!id) return socket.emit("Error", { message: "ID is required" });
 
-        if (!id) return socket.emit("Error", { message: "Company ID is required" });
+        // 1. Find the target (Check Company first, then Branch)
+        let target = await Company.findById(id).populate("POSProductsId EcomerceProducts");
+        if (!target) {
+          target = await Branch.findById(id).populate("POSProductsId EcomerceProducts");
+        }
 
-        const targetCompany = await Company.findById(id)
-          .populate("POSProductsId")
-          .populate("EcomerceProducts")||await Branch.findById(id).populate("POSProductsId")
-          .populate("EcomerceProducts");
-
-        if (!targetCompany) return socket.emit("Error", { message: "Company data or Branch not found" });
+        if (!target) {
+          return socket.emit("Error", { message: "Data not found" });
+        }
 
         const productsMap = new Map();
-        const getCleanData = (item) => (item._doc ? item._doc : item);
 
-        // 2. Process POS
-        if (targetCompany.POSProductsId) {
-          targetCompany.POSProductsId.forEach((prod) => {
-            if (prod && prod.sku) {
-              const data = getCleanData(prod);
-              productsMap.set(prod.sku, {
+        // Helper function to process and merge products
+        const processProducts = (productList, sourceName) => {
+          if (!productList || !Array.isArray(productList)) return;
+
+          productList.forEach((prod) => {
+            if (!prod || !prod.sku) return;
+
+            const data = prod._doc || prod;
+            const rawSku = String(prod.sku).trim();
+            const normalizedSku = rawSku.toLowerCase();
+
+            if (productsMap.has(normalizedSku)) {
+              const existing = productsMap.get(normalizedSku);
+              const existingTime = new Date(existing.updatedAt || 0).getTime();
+              const newTime = new Date(data.updatedAt || 0).getTime();
+
+              // Update "foundIn" tracking regardless of which record is newer
+              if (!existing.foundIn.includes(sourceName)) {
+                existing.foundIn.push(sourceName);
+              }
+
+              // FIX: If the current product is NEWER than the one in the map, replace the data
+              if (newTime > existingTime) {
+                const currentFoundIn = existing.foundIn; // Keep the combined source list
+                productsMap.set(normalizedSku, { 
+                  ...data, 
+                  sku: rawSku,
+                  foundIn: currentFoundIn,
+                  availableStock: data.quantity || 0 
+                });
+              }
+            } else {
+              // NEW PRODUCT ENTRY (First time seeing this SKU)
+              productsMap.set(normalizedSku, {
                 ...data,
+                sku: rawSku, 
                 availableStock: data.quantity || 0,
-                foundIn: ['POS'],
-                lastUpdate: data.updatedAt,
+                foundIn: [sourceName],
               });
             }
           });
-        }
+        };
 
-        // 3. Process E-commerce & Sync
-        if (targetCompany.EcomerceProducts) {
-          targetCompany.EcomerceProducts.forEach((prod) => {
-            if (prod && prod.sku) {
-              const ecomData = getCleanData(prod);
-              if (productsMap.has(prod.sku)) {
-                const existing = productsMap.get(prod.sku);
-                const posTime = new Date(existing.lastUpdate).getTime();
-                const ecomTime = new Date(ecomData.updatedAt).getTime();
+        // 2. Process both lists
+        processProducts(target.POSProductsId, 'POS');
+        processProducts(target.EcomerceProducts, 'Ecomerce');
 
-                // Keep newest data but mark as synced
-                if (ecomTime > posTime) {
-                  existing.availableStock = ecomData.quantity;
-                  existing.lastUpdate = ecomData.updatedAt;
-                }
-                existing.foundIn.push('Ecomerce');
-              } else {
-                productsMap.set(prod.sku, {
-                  ...ecomData,
-                  availableStock: ecomData.quantity || 0,
-                  foundIn: ['Ecomerce'],
-                  lastUpdate: ecomData.updatedAt
-                });
-              }
-            }
-          });
-        }
-
-        // 4. Format Results
+        // 3. Format Results
         const allResults = Array.from(productsMap.values()).map(p => ({
           _id: p._id,
           sku: p.sku,
@@ -78,28 +78,34 @@ const Getproducts = (io) => {
           barcode: p.barcode,
           soldAtPrice: p.soldAtPrice,
           quantity: p.availableStock,
+          // If in both, it's synced. Otherwise, shows which one it's in.
           syncStatus: p.foundIn.length > 1 ? "Fully Synced" : `Only in ${p.foundIn[0]}`,
           img: p.img,
-          lastSync: p.lastUpdate
+          updatedAt: p.updatedAt
         }));
 
+        // 4. Pagination
         const totalProducts = allResults.length;
-        const startIndex = (page - 1) * limit;
-        const paginatedItems = allResults.slice(startIndex, startIndex + Number(limit));
+        const currentPage = Math.max(1, Number(page));
+        const itemsPerPage = Math.max(1, Number(limit));
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        
+        const paginatedItems = allResults.slice(startIndex, startIndex + itemsPerPage);
 
+        // 5. Emit
         socket.emit("Getproducts", {
           success: true,
           totalProducts,
-          totalPages: Math.ceil(totalProducts / limit),
-          currentPage: Number(page),
+          totalPages: Math.ceil(totalProducts / itemsPerPage),
+          currentPage: currentPage,
           products: paginatedItems 
         });
-      });
 
-    } catch (error) {
-      console.error("Socket Error:", error);
-      socket.emit("Error", { message: "Internal Server Error" });
-    }
+      } catch (error) {
+        console.error("Socket Error:", error);
+        socket.emit("Error", { message: "Internal Server Error" });
+      }
+    });
   });
 };
 

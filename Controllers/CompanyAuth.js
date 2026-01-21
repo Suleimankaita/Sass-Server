@@ -2,6 +2,7 @@ const Jwt = require('jsonwebtoken');
 const asynchandler = require('express-async-handler');
 const User = require('../Models/AdminOwner');
 const Logss = require("../Models/UserLog");
+const { canUserLogin } = require('../utils/subscriptionCheck');
 
 const CompanyAuth = asynchandler(async (req, res) => {
   try {
@@ -14,7 +15,6 @@ const CompanyAuth = asynchandler(async (req, res) => {
     if (!found)
       return res.status(400).json({ message: 'User not found' });
 
-    console.log(found)
 
     if (!found.Active)
       return res.status(403).json({
@@ -23,6 +23,18 @@ const CompanyAuth = asynchandler(async (req, res) => {
 
     if (found.Password !== Password)
       return res.status(400).json({ message: 'Incorrect Username or Password' });
+
+    // Check subscription status for non-admin users
+    if (found.companyId) {
+      const loginCheck = canUserLogin(found, found.companyId, found.Role);
+      
+      if (!loginCheck.canLogin) {
+        return res.status(403).json({
+          message: loginCheck.message,
+          subscriptionStatus: loginCheck.subscriptionStatus
+        });
+      }
+    }
 
     const accessToken = Jwt.sign(
       {

@@ -29,8 +29,18 @@ const CreateBranch = asyncHandler(async (req, res) => {
         return res.status(404).json({ message: 'Company record not found' });
     }
 
+    // 3. Check branch limits based on subscription
+    if (targetCompany.branchesCreated >= targetCompany.maxBranches) {
+        return res.status(403).json({
+            message: `Branch limit reached. You have created ${targetCompany.branchesCreated} out of ${targetCompany.maxBranches} allowed branches for your ${targetCompany.subscriptionPlan} plan.`,
+            branchesCreated: targetCompany.branchesCreated,
+            maxBranches: targetCompany.maxBranches,
+            subscriptionPlan: targetCompany.subscriptionPlan,
+            upgrade: 'Please upgrade your subscription plan to create more branches'
+        });
+    }
 
-    // 3. Duplicate Check: Ensure branch name doesn't exist in THIS specific company
+    // 4. Duplicate Check: Ensure branch name doesn't exist in THIS specific company
     const isDuplicate = targetCompany.BranchId && targetCompany.BranchId.some(
         branch => branch.CompanyName?.toLowerCase() === CompanyName.toLowerCase()
     );
@@ -39,7 +49,7 @@ const CreateBranch = asyncHandler(async (req, res) => {
         return res.status(409).json({ message: 'Branch name already exists in this company' });
     }
 
-    // 4. Create the Branch (Bcrypt removed as requested)
+    // 5. Create the Branch (Bcrypt removed as requested)
     const newBranch = await Branch.create({
         CompanyName,
         CompanyEmail,
@@ -52,11 +62,12 @@ const CreateBranch = asyncHandler(async (req, res) => {
         }
     });
 
-    // 5. UPDATE HIERARCHY: Link Branch to Company
+    // 6. UPDATE HIERARCHY: Link Branch to Company
     targetCompany.BranchId.push(newBranch._id);
+    targetCompany.branchesCreated += 1; // Increment branch counter
     await targetCompany.save();
 
-    // 6. LOGGING: Create log and link to Admin using UserLogId array
+    // 7. LOGGING: Create log and link to Admin using UserLogId array
     const log = await UserLog.create({
         action: `Created branch: ${CompanyName}`,
         details: `Branch added to Company: ${targetCompany.CompanyName}`,
@@ -70,7 +81,9 @@ const CreateBranch = asyncHandler(async (req, res) => {
     res.status(201).json({ 
         success: true,
         message: `Branch successfully created and linked to ${targetCompany.CompanyName}`,
-        branchId: newBranch._id 
+        branchId: newBranch._id,
+        branchesCreated: targetCompany.branchesCreated,
+        maxBranches: targetCompany.maxBranches
     });
 });
 

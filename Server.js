@@ -13,6 +13,7 @@ const http = require("http");
 const {Getproducts}=require("./Controllers/Getproducts")
 const {GetUserSaleData}=require("./Controllers/GetUserSaleData")
 const {GetBranchproducts}=require("./Controllers/GetBranchProducts")
+const {AllBracodeGetproducts}=require("./Controllers/AllProductsBarcode")
 const { Server } = require("socket.io");
 const socketController=require("./Controllers/UpdateDeliveryProduct");
 const { initCustomerCare } = require('./Controllers/ticketSocket');
@@ -194,6 +195,7 @@ io.on("connection", (socket) => {
   // setInterval(() => {
     initCustomerCare(io);
     Getproducts(io);
+    AllBracodeGetproducts(io);
     GetUserSaleData(io);
     GetBranchproducts(io);
     // }, 1000);
@@ -410,7 +412,9 @@ if (event.data.status === "success") {
 );
 
 
-apiRoutes.use("/", require("./Routes/Root"));
+apiRoutes.use("/", require("./Routes/GetEcomerceProdoucts"));
+
+apiRoutes.use("/GetSingleEcom", require("./Routes/GetSingleEconmerceProduct"));
 
 apiRoutes.use("/AddProducts",upload.array('file'), require("./Routes/AddProducts"));
 
@@ -421,6 +425,9 @@ apiRoutes.use("/PayOutCheckout", require("./Routes/PayOutTransaction"));
 apiRoutes.use("/UpdateCompanyUser",upload.single('file'), require("./Routes/UpdateCompanyUser"));
 
 apiRoutes.use("/GetSingleProduct", require("./Routes/GetSingleProduct"));
+
+apiRoutes.use("/UpdateProduct", upload.array('file'), require("./Routes/UpdateProduct"));
+
 
 apiRoutes.use("/logout", require("./Routes/LogOut"));
 
@@ -442,7 +449,7 @@ apiRoutes.use("/Products/", require("./Routes/GetComapnyProduct"));
 
 apiRoutes.use("/Transaction", require("./Routes/AddTransaction"));
 
-apiRoutes.use("/Settings/", upload.single('companyLogo'), require("./Routes/CompanySettings"));
+apiRoutes.use("/Settings/", upload.fields([{name:'companyLogo',maxCount:1},{name:'slug',maxCount:1}]), require("./Routes/CompanySettings"));
 
 apiRoutes.use("/api/AdminAuth", require("./Routes/AdminAuth"));
 
@@ -480,6 +487,7 @@ apiRoutes.use("/GetTotalUsers", require("./Routes/GetAllcompanyUsers"));
 
 apiRoutes.use("/Get/Branch", require("./Routes/GetBranch"));
 apiRoutes.use("/Get/GetBranchUsers", require("./Routes/GetBranchUsers"));
+apiRoutes.use("/GetShops", require("./Routes/GetShops"));
 
 apiRoutes.use("/api/CompanyUserAuth", require("./Routes/CompanyUsersAuth"));
 

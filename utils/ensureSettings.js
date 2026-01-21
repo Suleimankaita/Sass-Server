@@ -25,12 +25,17 @@ async function ensureSettings({ companyId = null, branchId = null }) {
       }
     }
 
+    // Build payload without including a null branchId when creating company settings
+    const payload = { ...defaults };
+    if (branchId) {
+      payload.branchId = branchId;
+      if (companyId) payload.companyId = companyId;
+    } else if (companyId) {
+      payload.companyId = companyId;
+    }
+
     // 4. Create the new settings document
-    settings = await Settings.create({
-      ...defaults, // Inherited values (Currency, VAT, etc.)
-      companyId: branchId ? companyId : companyId, // Keep company link for branches
-      branchId: branchId || null,
-    });
+    settings = await Settings.create(payload);
   }
 
   return settings;

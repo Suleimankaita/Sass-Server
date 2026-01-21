@@ -64,7 +64,17 @@ const CompanyRegs = asynchandler(async (req, res) => {
       },
       CompanyName,
       CAC_Number,
-      UserLog:id._id
+      UserLog:id._id,
+      // Trial configuration - 7 days from now
+      trialStartDate: new Date(),
+      trialEndDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      subscriptionStatus: 'trial',
+      isSubscribed: false,
+      // Default limits for trial/free plan: 1 branch, 5 users
+      maxBranches: 1,
+      branchesCreated: 0,
+      maxUsers: 5,
+      usersCreated: 0,
     });
 
     console.log(newCompany)

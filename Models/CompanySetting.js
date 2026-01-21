@@ -23,6 +23,7 @@ const SettingsSchema = new mongoose.Schema(
     businessName: { type: String, default: "K S limited" },
     address: { type: String, default: "Address, City" },
     companyLogo: { type: String, default: null },
+    slug: { type: String, default: null },
 
     // ======================
     // Financials
@@ -31,8 +32,8 @@ const SettingsSchema = new mongoose.Schema(
     vatRate: { type: Number, default: 15 },
     defaultTaxRateBase: { type: Number, default: 15 },
 
-    primaryCurrency: { type: String, default: "USD ($)" },
-    secondaryCurrency: { type: String, default: "EUR (€)" },
+    primaryCurrency: { type: String, default: "Naira (₦)" },
+    secondaryCurrency: { type: String, default: "Naira (₦)" },
     showCurrencySymbol: { type: Boolean, default: false },
 
     // ======================

@@ -1,6 +1,7 @@
 const EcomerceProducts = require("../Models/EcomerceProducts");
 const POSProduct = require("../Models/POSProduct");
 const Company = require("../Models/Company"); // Using Company/Branch directly
+const Branch = require("../Models/Branch"); // Using Company/Branch directly
 const asyncHandler = require("express-async-handler");
 
 // @desc    Get a single merged product by ID using Company/Branch ID
@@ -10,6 +11,8 @@ const getMergedProductById = asyncHandler(async (req, res) => {
 
   // 1. Fetch Company/Branch directly and populate its product arrays
   const company = await Company.findById(companyId)
+    .populate("EcomerceProducts")
+    .populate("POSProductsId")||await Branch.findById(companyId)
     .populate("EcomerceProducts")
     .populate("POSProductsId");
 

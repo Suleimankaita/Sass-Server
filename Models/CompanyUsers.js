@@ -20,10 +20,12 @@ const CompanyUserSchema = new mongoose.Schema(
 
     // For multi-tenant
     companyId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Company",
-      index: true
-    },
+    type: mongoose.Schema.Types.ObjectId,
+    // required: true,
+    ref: 'Company',
+    index: true,
+  },
+  
     walletBalance: { type: [Number], default: 0 },
 
     Address: {

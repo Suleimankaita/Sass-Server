@@ -3,6 +3,8 @@ const asynchandler = require('express-async-handler');
 const bcrypt = require('bcryptjs');
 const User = require('../Models/AdminOwner');
 const Logs = require('../Models/UserLog');
+const Settings=require('../Models/CompanySetting')
+const { canUserLogin } = require('../utils/subscriptionCheck');
 
 const Auth = asynchandler(async (req, res) => {
     try {
@@ -24,7 +26,22 @@ const Auth = asynchandler(async (req, res) => {
 
         // const passwordMatches = await bcrypt.compare(Password, found.UserProfileId.password);
         if (Password!==found.UserProfileId.password) return res.status(401).json({ message: 'Incorrect username or password' });
+        
+        // Check subscription status for non-admin users
+        if (found.companyId && found.Role !== "Admin") {
+            const loginCheck = canUserLogin(found, found.companyId, found.Role);
+            
+            if (!loginCheck.canLogin) {
+                return res.status(403).json({
+                    message: loginCheck.message,
+                    subscriptionStatus: loginCheck.subscriptionStatus
+                });
+            }
+        }
+        
+        const com =await Settings.findOne({companyId:found?.companyId?._id.toString()}).exec() 
 
+        console.log('found ',com)
         // create login log
         const logEntry = await Logs.create({
             Username: found.Username,
@@ -36,7 +53,6 @@ const Auth = asynchandler(async (req, res) => {
         found.UserLogId.push(logEntry._id);
         if (!found.Role) found.Role = 'User';
         await found.save();
-
         const payload = {
             UserInfo: {
                 Username: found.Username,

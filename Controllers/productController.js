@@ -11,6 +11,7 @@ const Branch = require('../Models/Branch');
 /**
  * 🟢 ADD PRODUCT
  */
+
 const ProductRegs = asyncHandler(async (req, res) => {
   const { 
     name, description, price, quantity, Selection, id, sku, barcode, 
@@ -71,9 +72,9 @@ const ProductRegs = asyncHandler(async (req, res) => {
   // 5. Prepare Product Data
   // const finalSku = sku || `SKU-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
   const imgPaths = files && Array.isArray(files) ? files.map(file => file.filename) : [];
-
+    const ids= entityType==="Branch"?"branchId":"companyId"
   const baseProductData = {
-    companyId: targetEntity._id,
+    [ids]: targetEntity._id,
     entityType: entityType,
     name,
     description,
@@ -105,6 +106,7 @@ const ProductRegs = asyncHandler(async (req, res) => {
     if (!targetEntity.POSProductsId) targetEntity.POSProductsId = [];
     targetEntity.POSProductsId.push(posProduct._id);
     createdProducts.POS = posProduct;
+    
   }
 
   if (Selection === 'E-commerce Only' || Selection === 'Both Platforms') {
@@ -188,7 +190,130 @@ const CreateOrder = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * 🟡 UPDATE PRODUCT
+ * Handles updating existing products in POS, E-commerce, or both.
+ */
+const UpdateProduct = asyncHandler(async (req, res) => {
+  const {
+    productId,
+    name,
+    description,
+    quantity,
+    Selection, // "POS Only", "E-commerce Only", or "Both Platforms"
+    id, // Acting User ID
+    barcode,
+    categoryName,
+    soldAtPrice,
+    actualPrice,
+    costPrice,
+    CompanyId,
+  } = req.body;
+
+  const files = req.files;
+
+  // 1. Validation
+  if (!productId || !id || !CompanyId) {
+    return res.status(400).json({ message: 'Product ID, User ID, and Company ID are required' });
+  }
+
+  // 2. Identify Actor & Role
+  const adminActor = await Admin.findById(id);
+  const userActor = !adminActor ? await User.findById(id).populate('UserProfileId') : null;
+  const actingUser = adminActor || userActor;
+
+  if (!actingUser) {
+    return res.status(404).json({ message: 'User or Admin not found' });
+  }
+  const actorRole = adminActor ? 'ADMIN' : 'USER';
+
+  // 3. Find original product to determine source and current images
+  // We check both to see where the product currently exists
+  const posProduct = await POSProducts.findById(productId);
+  const ecomProduct = await EcomerceProducts.findById(productId);
+  const existingProduct = posProduct || ecomProduct;
+
+  if (!existingProduct) {
+    return res.status(404).json({ message: 'Product not found on any platform' });
+  }
+
+  // 4. Authorization Check
+  const targetEntity = await Company.findById(CompanyId) || await Branch.findById(CompanyId);
+  if (!targetEntity) {
+    return res.status(404).json({ message: 'Company or Branch not found' });
+  }
+
+  if (actorRole === 'USER') {
+    const isMember = targetEntity.CompanyUsers?.some(uId => uId.toString() === actingUser._id.toString());
+    if (!isMember) {
+      return res.status(403).json({ message: 'Access Denied: You do not belong to this entity' });
+    }
+  }
+
+  // 5. Image Logic
+  // If new files are uploaded, replace the array. Otherwise, keep the old ones.
+  let imgPaths = existingProduct.img;
+  if (files && Array.isArray(files) && files.length > 0) {
+    imgPaths = files.map(file => file.filename);
+  }
+
+  // 6. Prepare Update Object
+  const updateData = {
+    name: name || existingProduct.name,
+    description: description || existingProduct.description,
+    categoryName: categoryName || existingProduct.categoryName,
+    costPrice: costPrice !== undefined ? Number(costPrice) : existingProduct.costPrice,
+    soldAtPrice: soldAtPrice !== undefined ? Number(soldAtPrice) : existingProduct.soldAtPrice,
+    actualPrice: actualPrice !== undefined ? Number(actualPrice) : existingProduct.actualPrice,
+    quantity: quantity !== undefined ? Number(quantity) : existingProduct.quantity,
+    barcode: barcode || existingProduct.barcode, // Keep as string to avoid precision loss
+    img: imgPaths,
+    "UserUpload.lastModifiedBy": actingUser.Username,
+    "UserUpload.lastModifiedDate": new Date().toISOString(),
+  };
+
+  // 7. Execute Synchronized Updates
+  let updatedInPOS = null;
+  let updatedInEcom = null;
+
+  // Logic to handle cross-platform updates
+  try {
+    if (Selection === 'POS Only' || Selection === 'Both Platforms') {
+      updatedInPOS = await POSProducts.findByIdAndUpdate(productId, updateData, { new: true });
+    }
+
+    if (Selection === 'E-commerce Only' || Selection === 'Both Platforms') {
+      updatedInEcom = await EcomerceProducts.findByIdAndUpdate(productId, updateData, { new: true });
+    }
+  } catch (error) {
+    return res.status(500).json({ message: 'Database update failed', error: error.message });
+  }
+
+  if (!updatedInPOS && !updatedInEcom) {
+    return res.status(400).json({ message: 'Failed to update product. Check Selection value.' });
+  }
+
+  // 8. Log the Action
+  await Logs.create({
+    actorId: actingUser._id,
+    actorRole,
+    action: 'PRODUCT_UPDATED',
+    platform: Selection,
+    metadata: { 
+      productName: updateData.name, 
+      targetName: targetEntity.name,
+      platforms: Selection 
+    },
+    date: new Date().toISOString(),
+  });
+
+  res.status(200).json({
+    message: `Product '${updateData.name}' updated successfully on ${Selection}`,
+    product: updatedInPOS || updatedInEcom, // Return the updated document
+  });
+});
 module.exports = {
   ProductRegs,
   CreateOrder,
+  UpdateProduct
 };
