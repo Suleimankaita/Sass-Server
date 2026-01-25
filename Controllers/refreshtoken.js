@@ -49,7 +49,7 @@ exports.refreshToken = asyncHandler(async (req, res) => {
   console.log(refreshToken)
   // 🔍 Resolve account dynamically
   const account = await resolveAccount(Role, id);
-  console.log(account)
+  // console.log(account)
 
   if (!account) {
     return res.status(401).json({ message: "Account not found" });
@@ -60,18 +60,18 @@ exports.refreshToken = asyncHandler(async (req, res) => {
     return res.status(403).json({ message: "Account disabled" });
   }
   
-  if (Role === "Admin" && account.Active === false) {
+  if (Role === "Admin" && account?.Active === false) {
     return res.status(403).json({ message: "Admin not verified" });
   }
   
   // 🏢 Company subscription validation
-  if (Role === "company_user"||account.companyId||account.companyId._id) {
-    const company = await Company.findById(account.companyId||account.companyId._id)|| await Branch.findById(account.companyId||account.companyId._id);
+  if (Role === "company_user"||account?.companyId||account?.companyId?._id) {
+    const company = await Company.findById(account?.companyId||account?.companyId._id)|| await Branch.findById(account?.companyId||account?.companyId?._id);
     if (!company) {
       return res.status(403).json({ message: "Company not found" });
     }
     
-    if (company.expireAt && company.expireAt < new Date()) {
+    if (company?.expireAt && company?.expireAt < new Date()) {
       return res
         .status(403)
         .json({ message: "Company subscription expired" });
@@ -80,7 +80,7 @@ exports.refreshToken = asyncHandler(async (req, res) => {
   // console.log(payload)
   // 🔐 Refresh token match
 
-  if (account.UserProfileId?.token !== refreshToken) {
+  if (account?.UserProfileId?.token !== refreshToken) {
     return res.status(401).json({ message: "Token mismatch" });
   }
   

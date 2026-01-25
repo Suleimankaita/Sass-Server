@@ -102,6 +102,11 @@ const CompanyAuth = asynchandler(async (req, res) => {
     await found.save();
 
     // Set Cookie maxAge to match the token expiry
+      res.clearCookie('AdminCookie', refreshToken, {
+      sameSite: "none",
+      secure: true,
+      httpOnly: true,
+      maxAge: 7 * 24 * 60 * 60 * 1000}); 
     res.cookie('jwt', refreshToken, {
       sameSite: "none",
       secure: true,

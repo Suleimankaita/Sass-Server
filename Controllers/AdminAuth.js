@@ -77,6 +77,7 @@ const Auth = asynchandler(async (req, res) => {
 
         await found.save()
         await found.UserProfileId.save()
+        res.clearCookie('jwt', cookieOptions); 
         res.cookie('AdminCookie', refreshToken, cookieOptions); 
         return res.status(200).json({ accessToken, role: found.Role,status:201 });
     } catch (err) {

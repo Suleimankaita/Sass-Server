@@ -41,7 +41,15 @@ const OrderSchema = new mongoose.Schema(
       enum: ["Pending", "Processing", "Shipped", "Delivered", "Cancelled", "Completed"],
       default: "Pending",
     },
-
+    paymentReference: {
+      type: String,
+      unique: true,
+      index: true,
+    },
+    paymentStatus: String,
+    paid: Boolean,
+    paymentGateway: String,
+    amountPaid: Number,
     paymentStatus: {
       type: String,
       enum: ["Unpaid", "Paid", "Partially Paid", "Refunded"],
@@ -55,7 +63,14 @@ const OrderSchema = new mongoose.Schema(
         lng: Number,
       },
       // For the animated Polyline in your map
-      tracking: [{ lat: Number, lng: Number, at: { type: Date, default: Date.now } }],
+      tracking: {
+        type: [{ lat: Number, lng: Number, at: { type: Date, default: Date.now } }],
+        default: [{
+          lat: 0,
+          lng: 0,
+          // at: new Date(),
+        }],
+    },
     },
   },
   { timestamps: true }

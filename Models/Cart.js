@@ -8,6 +8,12 @@ const UserDealSchema = new mongoose.Schema({
     required: true,
     index: true
   },
+  CartId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    // required: true,
+    index: true
+  },
 
   dealId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -33,6 +39,11 @@ const UserDealSchema = new mongoose.Schema({
     required: false,
     default: 0
   },
+  price: {
+    type: Number,
+    required: false,
+    default: 0
+  },
 
   discount: {
     type: Number,
@@ -45,6 +56,9 @@ const UserDealSchema = new mongoose.Schema({
     default: 1,
     min: 1
   },
+  name: String,
+  img: String,
+  companyId: String,
 
   status: {
     type: String,

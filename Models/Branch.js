@@ -20,6 +20,7 @@ const BranchSchema = new mongoose.Schema(
         unique: true,
         index: true,
         sparse: true 
+        
     },
     WalletNumber: Number,
     walletBalance: { type: [Number], default: 0 },

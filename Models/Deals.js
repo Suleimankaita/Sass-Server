@@ -4,9 +4,10 @@ const DealProductSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
     // Human-readable company name
-    company: { type: String, required: true },
+    company: { type: String, },
     // Reference to the Company document for filtering
     companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', index: true },
+    BranchId: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', index: true },
     originalPrice: { type: Number, required: true },
     dealPrice: { type: Number, required: true },
     discount: { type: Number, required: true },

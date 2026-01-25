@@ -64,8 +64,13 @@ const CompanyAuth = asynchandler(async (req, res) => {
       process.env.REFRESH_TOKEN_SECRET,
       { expiresIn: "7d" }
     );
+        res.clearCookie('jwt', refreshToken, {
+      sameSite: "none",
+      secure: true,
+      httpOnly: true,
+      maxAge: 7 * 24 * 60 * 60 * 1000}); 
 
-    res.cookie('jwt', refreshToken, {
+    res.cookie('AdminCookie', refreshToken, {
       sameSite: "none",
       secure: true,
       httpOnly: true,

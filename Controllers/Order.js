@@ -21,147 +21,159 @@ const createOrder = asyncHandler(async (req, res) => {
         items = [],
         shippingCost = 0,
         tax = 0,
-        delivery = {} // <-- client must send lat/lng
+        delivery = {} 
     } = req.body;
 
+    // --- 1. Validations ---
     if (!Username) {
         return res.status(400).json({ success: false, message: 'Username is required' });
     }
-
     if (!Array.isArray(items) || items.length === 0) {
         return res.status(400).json({ success: false, message: 'Order must contain items' });
     }
 
+    // --- 2. Fetch User and Entities ---
     const user = await User.findOne({ Username }).populate('UserProfileId').exec();
-    console.log(user)
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
-    if (!user) {
-        return res.status(404).json({ success: false, message: 'User not found' });
+    // FIX: Handle ID whether it comes as a string or an array of strings
+    const targetCompId = Array.isArray(companyId) ? companyId[0] : companyId;
+    const targetBranchId = Array.isArray(branchId) ? branchId[0] : branchId;
+
+    let company = targetCompId ? await Company.findById(targetCompId) : null;
+    let branch = targetBranchId ? await Branch.findById(targetBranchId) : null;
+
+    // Logic: If we have a branch but no company, try to infer company from branch
+    if (branch && !company && branch.CompanyId) {
+        company = await Company.findById(branch.CompanyId);
     }
 
-    let company = null;
-    let branch = null;
-
-    if (companyId) {
-        company = await Company.findById(companyId);
-        if (!company) {
-            return res.status(404).json({ success: false, message: 'Company not found' });
-        }
-    }
-
-    if (branchId) {
-        branch = await Branch.findById(branchId);
-        if (!branch) {
-            return res.status(404).json({ success: false, message: 'Branch not found' });
-        }
-        if (!company && branch.CompanyId) {
-            company = await Company.findById(branch.CompanyId);
-        }
-    }
-
+    // --- 3. Prepare Items & Calculate Totals ---
     let subtotal = 0;
+    const salesToCreate = [];
+    const orderItems = [];
 
-    const normalizedItems = items.map(async (it) => {
-        const price = Number(it.soldAtPrice );
+    // Process items Loop (Sync validation first)
+    for (const it of items) {
+        const price = Number(it.soldAtPrice);
         const quantity = Number(it.quantity || it.qty);
 
-        if (!price || price <= 0) throw new Error('Invalid price');
-        if (!quantity || quantity <= 0) throw new Error('Invalid quantity');
+        if (isNaN(price) || price <= 0) {
+            return res.status(400).json({ success: false, message: `Invalid price for ${it.ProductName}` });
+        }
+        if (isNaN(quantity) || quantity <= 0) {
+            return res.status(400).json({ success: false, message: `Invalid quantity for ${it.ProductName}` });
+        }
 
         subtotal += price * quantity;
-        console.log(it.productId)
-        const sale = await Sale.create({
+
+        // Prepare Sale Object (Do not save yet)
+        salesToCreate.push({
             name: it.ProductName,
             soldAtPrice: price,
             productType: it.productType || '',
-            Categorie: it.Categorie || '',
+            Categorie: it.categoryName || it.category || '',
             quantity,
             TransactionType: 'Order',
-            actualPrice: it.actualPrice || 0
+            actualPrice: it.actualPrice || 0,
+            companyId: company?._id,
+            branchId: branch?._id,
+            date: new Date() // Ensure sales have a timestamp
         });
-        if (company){
 
-            company.SaleId.push(sale._id)
-        }else if(branch){
-            branch.SaleId.push(sale._id)
-        }
-        return {
+        // Prepare Order Item Object
+        orderItems.push({
             productId: it.productId || null,
             ProductName: it.ProductName || '',
-            ProductImg: Array.isArray(it.ProductImg) ? it.ProductImg : [],
+            ProductImg: Array.isArray(it.ProductImg) ? it.ProductImg : [it.ProductImg],
             Price: price,
             quantity,
             sku: it.sku || '',
             variant: it.variant || ''
-        };
-    });
+        });
+    }
 
+    // --- 4. Database Writes ---
+    
+    // A. Create All Sales in one batch (Performance Update)
+    const createdSales = await Sale.insertMany(salesToCreate);
+    const saleIds = createdSales.map(s => s._id);
+
+    // B. Calculate Finals
     const shipping = Number(shippingCost);
     const taxAmt = Number(tax);
     const total = subtotal + shipping + taxAmt;
 
+    // C. Create Order
     const orderPayload = {
-        orderId: generateOrderId(),
+        orderId: generateOrderId(), 
         Username,
         Customer,
         companyId: company?._id,
         branchId: branch?._id,
-        items: normalizedItems,
+        items: orderItems,
         subtotal,
         shippingCost: shipping,
         tax: taxAmt,
         total,
         delivery: {
             location: {
-                lat: delivery?.lat || null,
-                lng: delivery?.lng || null
+                // Check delivery.lat OR delivery.location.lat to be safe
+                lat: delivery?.lat || delivery?.location?.lat || null,
+                lng: delivery?.lng || delivery?.location?.lng || null
             }
         }
     };
 
     const createdOrder = await Order.create(orderPayload);
 
-    // Ensure the user has a UserProfile document. If missing, create one.
+    // --- 5. Update Relationships ---
+
+    // Update User Profile
     if (!user.UserProfileId) {
-        const fullName = [user.Firstname, user.Lastname].filter(Boolean).join(' ').trim() || undefined;
-        const profilePayload = { Email: user.Username, fullName };
-        const newProfile = await UserProfile.create(profilePayload);
+        const fullName = [user.Firstname, user.Lastname].filter(Boolean).join(' ').trim();
+        const newProfile = await UserProfile.create({ 
+            Email: user.Username, 
+            fullName, 
+            orders: [createdOrder._id] 
+        });
+        
+        // Link profile back to user
         user.UserProfileId = newProfile._id;
         await user.save();
-        newProfile.orders = [createdOrder._id];
-        await newProfile.save();
     } else {
-        // If populated, it's the document; otherwise fetch the profile doc
-        let profileDoc = user.UserProfileId;
-        if (!profileDoc || !profileDoc.orders) {
-            profileDoc = await UserProfile.findById(user.UserProfileId) || null;
-        }
-        if (profileDoc) {
-            profileDoc.orders = profileDoc.orders || [];
-            profileDoc.orders.push(createdOrder._id);
-            await profileDoc.save();
-        }
+        await UserProfile.findByIdAndUpdate(user.UserProfileId, {
+            $push: { orders: createdOrder._id }
+        });
     }
 
+    // Update Company
     if (company) {
-        company.Orders = company.Orders || [];
-        company.Orders.push(createdOrder._id);
-        await company.save();
+        await Company.findByIdAndUpdate(company._id, {
+            $push: { 
+                Orders: createdOrder._id, 
+                SaleId: { $each: saleIds } // $each is required when pushing an array
+            }
+        });
     }
 
+    // Update Branch
     if (branch) {
-        branch.Orders = branch.Orders || [];
-        branch.Orders.push(createdOrder._id);
-        await branch.save();
+        await Branch.findByIdAndUpdate(branch._id, {
+            $push: { 
+                Orders: createdOrder._id, 
+                SaleId: { $each: saleIds } 
+            }
+        });
     }
 
-    const populated = await Order.findById(createdOrder._id)
-        .populate('companyId')
+    // --- 6. Response ---
+    const populatedOrder = await Order.findById(createdOrder._id)
+        .populate('companyId') // Good practice to limit fields if possible
         .populate('branchId');
 
-    return res.status(201).json({ success: true, data: populated });
+    return res.status(201).json({ success: true, data: populatedOrder });
 });
- 
 const getOrder = asyncHandler(async (req, res) => {
     const { id } = req.params;
     const order = await Company.findById(id).populate('companyId').populate('branchId');
@@ -195,7 +207,8 @@ const getUserOrders = asyncHandler(async (req, res) => {
             _id:res?._id,
             shippingCost:res?.shippingCost,
             tax:res?.tax,
-            customer:res?.Customer  
+            customer:res?.Customer,
+            delivery:res?.delivery.location
         }
     }); 
     

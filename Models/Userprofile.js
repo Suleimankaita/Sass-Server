@@ -48,6 +48,7 @@ const UserProfileSchema = new mongoose.Schema(
     ecommerceProducts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Products" }],
     posProducts: [{ type: mongoose.Schema.Types.ObjectId, ref: "POSProducts" }],
     cart: { type: mongoose.Schema.Types.ObjectId, ref: "Cart", default: null },
+    CartId: { type: mongoose.Schema.Types.ObjectId, ref: "Cart", default: null },
 
     // Wallet / Balance
     walletNumber: { type: Number, default: null },

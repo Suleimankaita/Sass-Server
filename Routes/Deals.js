@@ -7,7 +7,7 @@ const Deals = require('../Controllers/Deals');
 router.post('/create', Verify, Deals.createDeal);
 
 // List all active deals
-router.get('/', Verify,Deals.listDeals);
+router.get('/', Deals.listDeals);
 
 // List deals for a specific company (optionally include expired via ?includeExpired=true)
 router.get('/company/:companyId', Verify,Deals.getCompanyDeals);

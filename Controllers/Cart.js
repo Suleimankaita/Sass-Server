@@ -1,187 +1,229 @@
+// controllers/cartController.js
 const User = require("../Models/Userprofile");
-const Cart = require("../Models/Cart");
-const asynchandler = require("express-async-handler");
+const UserDeal = require("../Models/Cart");
+const EcomerceProducts = require("../Models/EcomerceProducts");
+const asyncHandler = require("express-async-handler");
+const mongoose = require("mongoose");
 
-// Helper to determine which user/cart to operate on.
-// Allows admin/company users to pass `targetUserId` in body/query to operate on other users' carts.
+// Helper to resolve user and cart
 async function resolveUserAndCart(req, targetUserId) {
-	const requesterId = req.userId || (req.user && req.user._id);
-	const requesterType = req.userType || (req.user && req.user.Role) || "User";
-	const canOverride = (t) => t === "Admin" || t === "CompanyUser";
+    const requesterId = req.userId || (req.user && req.user._id);
+    const requesterType = req.userType || (req.user && req.user.Role) || "User";
+    const canOverride = (t) => t === "Admin" || t === "CompanyUser";
 
-	const effectiveUserId = (targetUserId && canOverride(requesterType)) ? targetUserId : requesterId;
+    const effectiveUserId = (targetUserId && canOverride(requesterType)) ? targetUserId : requesterId;
+    if (!effectiveUserId) return { effectiveUserId: null, profile: null, cart: null };
 
-	let profile = null;
-	if (effectiveUserId) profile = await User.findById(effectiveUserId).exec();
+    const profile = await User.findById(effectiveUserId).exec();
 
-	let cart = null;
-	if (profile && profile.CartId) {
-		cart = await Cart.findById(profile.CartId).exec();
-	}
+    // Fetch user's cart items from UserDeal
+    const cart = await UserDeal.find({ userId: effectiveUserId, status: 'claimed' }).exec();
 
-	if (!cart && effectiveUserId) {
-		cart = await Cart.findOne({ userId: effectiveUserId }).exec();
-	}
-
-	return { effectiveUserId, profile, cart };
+    return { effectiveUserId, profile, cart };
 }
 
-// Add item to cart (create cart if not exists)
-const addToCart = asynchandler(async (req, res) => {
-	const targetUserId = req.body.targetUserId || req.query.targetUserId;
-	const { effectiveUserId, profile, cart: existingCart } = await resolveUserAndCart(req, targetUserId);
+// Add item to cart
+const addToCart = asyncHandler(async (req, res) => {
+    const targetUserId = req.body.targetUserId || req.query.targetUserId;
+    const { effectiveUserId, profile } = await resolveUserAndCart(req, targetUserId);
 
-	if (!effectiveUserId) return res.status(401).json({ message: "Unauthorized" });
+    if (!effectiveUserId) return res.status(401).json({ message: "Unauthorized" });
 
-	const {
-		productId,
-		quantity = 1,
-		name,
-		price,
-		oldPrice,
-		discount,
-		color,
-		size,
-		img,
-	} = req.body;
+    const {
+        productId,
+        dealId,
+        quantity = 1,
+        dealPrice = 0,
+        originalPrice = 0,
+        name,
+        img,
+        price,
+        discount = 0
+    } = req.body;
+    console.log("Add to cart request body:", req.body);
+    if (!productId && !dealId) return res.status(400).json({ message: "productId or dealId is required" });
 
-	if (!productId) return res.status(400).json({ message: "productId is required" });
+    const qty = Math.max(1, parseInt(quantity, 10) || 1);
 
-	const qty = Math.max(1, parseInt(quantity, 10) || 1);
+    // Check if user already has this product/deal
+    let cartItem = await UserDeal.findOne({
+        userId: effectiveUserId,
+        productId: productId || null,
+        dealId: dealId || null,
+        status: 'claimed'
+    });
 
-	const newItem = {
-		productId,
-		name,
-		price,
-		oldPrice,
-		discount,
-		color,
-		size,
-		quantity: qty,
-		img,
-	};
+    if (cartItem) {
+        // Update quantity and prices
+        cartItem.quantity += qty;
+        cartItem.dealPrice = dealPrice !== undefined ? dealPrice : cartItem.dealPrice;
+        cartItem.originalPrice = originalPrice !== undefined ? originalPrice : cartItem.originalPrice;
+        cartItem.discount = discount !== undefined ? discount : cartItem.discount;
+        await cartItem.save();
+    } else {
+        // Create new cart item
+        cartItem = new UserDeal({
+            userId: effectiveUserId,
+            productId: productId || undefined,
+            dealId: dealId || undefined,
+            quantity: qty,
+            dealPrice,
+            name,
+            img,
+            originalPrice,
+            price,
+            discount
+        });
+        await cartItem.save();
+    }
 
-	let cart = existingCart;
-	if (!cart) {
-		cart = new Cart({ userId: effectiveUserId, items: [newItem] });
-		await cart.save();
-		if (profile && (!profile.CartId || String(profile.CartId) !== String(cart._id))) {
-			profile.CartId = cart._id;
-			await profile.save();
-		}
-		return res.status(201).json(cart);
-	}
+    // Link CartId to user profile if not linked
+    if (profile && !profile.CartId) {
+        profile.CartId = effectiveUserId; // Optional: we can keep CartId as userId for reference
+        await profile.save();
+    }
 
-	const idx = cart.items.findIndex((i) =>
-		String(i.productId) === String(productId) &&
-		(i.color || "") === (color || "") &&
-		(i.size || "") === (size || "")
-	);
-
-	if (idx > -1) {
-		cart.items[idx].quantity = (cart.items[idx].quantity || 0) + qty;
-		if (name) cart.items[idx].name = name;
-		if (price !== undefined) cart.items[idx].price = price;
-		if (img) cart.items[idx].img = img;
-	} else {
-		cart.items.push(newItem);
-	}
-
-	cart.updatedAt = Date.now();
-	await cart.save();
-	return res.status(200).json(cart);
+    // Return updated cart
+    const updatedCart = await UserDeal.find({ userId: effectiveUserId, status: 'claimed' }).exec();
+    return res.status(200).json(updatedCart);
 });
 
-// Get cart for current user (admin/company can pass targetUserId)
-const getCart = asynchandler(async (req, res) => {
-	const targetUserId = req.query.targetUserId || req.body.targetUserId;
-	const { effectiveUserId, profile, cart } = await resolveUserAndCart(req, targetUserId);
+// Get cart
+const getCart = asyncHandler(async (req, res) => {
+    const targetUserId = req.query.targetUserId || req.body.targetUserId;
+    const { effectiveUserId } = await resolveUserAndCart(req, targetUserId);
 
-	if (!effectiveUserId) return res.status(401).json({ message: "Unauthorized" });
+    if (!effectiveUserId) return res.status(401).json({ message: "Unauthorized" });
 
-	if (!cart) return res.status(200).json({ items: [] });
-	return res.status(200).json(cart);
+  const cart = await UserDeal.find({
+userId: effectiveUserId,
+status: 'claimed'
+}).lean();
+
+
+// Extract product IDs
+const productIds = cart.map(item => item.productId);
+
+
+// Fetch all products at once
+const products = await EcomerceProducts.find({
+_id: { $in: productIds }
+}).lean();
+
+
+// Merge cart + product data
+const mergedCart = cart.map(cartItem => {
+const product = products.find(
+p => p._id.toString() === cartItem.productId.toString()
+);
+
+
+return {
+...cartItem,
+product
+};
 });
 
-// Update quantity of an item (set absolute quantity)
-const updateItemQuantity = asynchandler(async (req, res) => {
-	const targetUserId = req.body.targetUserId || req.query.targetUserId;
-	const { effectiveUserId, profile, cart } = await resolveUserAndCart(req, targetUserId);
 
-	if (!effectiveUserId) return res.status(401).json({ message: "Unauthorized" });
-
-	const { productId, quantity, color, size } = req.body;
-	if (!productId) return res.status(400).json({ message: "productId is required" });
-
-	if (!cart) return res.status(404).json({ message: "Cart not found" });
-
-	const idx = cart.items.findIndex((i) =>
-		String(i.productId) === String(productId) &&
-		(i.color || "") === (color || "") &&
-		(i.size || "") === (size || "")
-	);
-
-	if (idx === -1) return res.status(404).json({ message: "Item not in cart" });
-
-	const qty = parseInt(quantity, 10);
-	if (isNaN(qty) || qty < 0) return res.status(400).json({ message: "Invalid quantity" });
-
-	if (qty === 0) {
-		cart.items.splice(idx, 1);
-	} else {
-		cart.items[idx].quantity = qty;
-	}
-
-	cart.updatedAt = Date.now();
-	await cart.save();
-	return res.status(200).json(cart);
+return res.status(200).json(mergedCart);
 });
 
-// Remove single item
-const removeItem = asynchandler(async (req, res) => {
-	const targetUserId = req.body.targetUserId || req.query.targetUserId;
-	const { effectiveUserId, profile, cart } = await resolveUserAndCart(req, targetUserId);
+// Update item quantity
+const updateItemQuantity = asyncHandler(async (req, res) => {
+  const targetUserId = req.body.targetUserId || req.query.targetUserId;
+  const { effectiveUserId } = await resolveUserAndCart(req, targetUserId);
 
-	if (!effectiveUserId) return res.status(401).json({ message: "Unauthorized" });
+  if (!effectiveUserId) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
 
-	const { productId, color, size } = req.body;
-	if (!productId) return res.status(400).json({ message: "productId is required" });
+  const { productId, quantity } = req.body;
 
-	if (!cart) return res.status(404).json({ message: "Cart not found" });
+  if (!productId) {
+    return res.status(400).json({ message: "productId is required" });
+  }
 
-	const before = cart.items.length;
-	cart.items = cart.items.filter((i) => !(
-		String(i.productId) === String(productId) &&
-		(i.color || "") === (color || "") &&
-		(i.size || "") === (size || "")
-	));
+  const qty = Number(quantity);
+  if (![1, -1].includes(qty)) {
+    return res.status(400).json({
+      message: "quantity must be 1 (increment) or -1 (decrement)",
+    });
+  }
 
-	if (cart.items.length === before) return res.status(404).json({ message: "Item not found" });
+  // Atomic increment / decrement
+  const item = await UserDeal.findOneAndUpdate(
+    {
+      userId: effectiveUserId,
+      _id:productId,
+      status: "claimed",
+    },
+    {
+      $inc: { quantity: qty === 1 ? 1 : -1 },
+    },
+    { new: true }
+  );
 
-	cart.updatedAt = Date.now();
-	await cart.save();
-	return res.status(200).json(cart);
+  if (!item) {
+    return res.status(404).json({ message: "Item not in cart" });
+  }
+
+  // Auto remove if quantity <= 0
+  if (item.quantity <= 0) {
+    await item.deleteOne();
+  } else if (item.unitPrice) {
+    item.totalPrice = item.unitPrice * item.quantity;
+    await item.save();
+  }
+
+  const updatedCart = await UserDeal.find({
+    userId: effectiveUserId,
+    status: "claimed",
+  });
+
+  return res.status(200).json(updatedCart);
 });
 
-// Clear entire cart
-const clearCart = asynchandler(async (req, res) => {
-	const targetUserId = req.body.targetUserId || req.query.targetUserId;
-	const { effectiveUserId, profile, cart } = await resolveUserAndCart(req, targetUserId);
+// Remove item
+const removeItem = asyncHandler(async (req, res) => {
+    const targetUserId = req.body.targetUserId || req.query.targetUserId;
+    const { effectiveUserId } = await resolveUserAndCart(req, targetUserId);
 
-	if (!effectiveUserId) return res.status(401).json({ message: "Unauthorized" });
+    if (!effectiveUserId) return res.status(401).json({ message: "Unauthorized" });
 
-	if (!cart) return res.status(200).json({ items: [] });
+    const { productId, dealId } = req.body;
+    if (!productId ) return res.status(400).json({ message: "productId  is required" });
 
-	cart.items = [];
-	cart.updatedAt = Date.now();
-	await cart.save();
-	return res.status(200).json(cart);
+    const cartItem = await UserDeal.findOne({
+        userId: effectiveUserId,
+        _id: productId || null,
+        // dealId: dealId || null,
+        status: 'claimed'
+    });
+
+    if (!cartItem) return res.status(404).json({ message: "Item not found" });
+
+    await cartItem.deleteOne();
+
+    const updatedCart = await UserDeal.find({ userId: effectiveUserId, status: 'claimed' }).exec();
+    return res.status(200).json(updatedCart);
+});
+
+// Clear cart
+const clearCart = asyncHandler(async (req, res) => {
+    const targetUserId = req.body.targetUserId || req.query.targetUserId;
+    const { effectiveUserId } = await resolveUserAndCart(req, targetUserId);
+
+    if (!effectiveUserId) return res.status(401).json({ message: "Unauthorized" });
+
+    await UserDeal.deleteMany({ userId: effectiveUserId, status: 'claimed' });
+
+    return res.status(200).json([]);
 });
 
 module.exports = {
-	addToCart,
-	getCart,
-	updateItemQuantity,
-	removeItem,
-	clearCart,
+    addToCart,
+    getCart,
+    updateItemQuantity,
+    removeItem,
+    clearCart
 };

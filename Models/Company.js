@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const CompanySchema = new mongoose.Schema(
   {
     CompanyName: String,
-    slug: { type: Number, unique: true, index: true,default:Math.floor(100000000,Math.random()*99999999) },
+    slug: { type: Number, unique: true, index: true,default:'' },
     ownerId: { type: mongoose.Schema.Types.ObjectId, ref: "Admin" },
     CompanySettingsId: { type: mongoose.Schema.Types.ObjectId, ref: "CompanySettings" },
     TransactionId: [{ type: mongoose.Schema.Types.ObjectId, ref: "Transaction" }],

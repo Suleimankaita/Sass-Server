@@ -1,13 +1,18 @@
 const asynchandler = require('express-async-handler');
 const DealProduct = require('../Models/Deals');
 const Company = require('../Models/Company');
+const Branch = require('../Models/Branch');
 const Transaction = require('../Models/transactions');
 
 // Create a deal — only Admin (platform) or Company admin/manager may create.
 const createDeal = asynchandler(async (req, res) => {
-  // actor info comes from Verify middleware: req.user and req.userType
   const actor = req.user;
   const actorType = req.userType || (actor && actor.Role ? 'CompanyUser' : 'User');
+  console.log('Create Deal Actor:', actorType, actor ? actor.Username : 'unknown');
+
+  if (!actor) {
+    return res.status(401).json({ success: false, message: 'Authentication required' });
+  }
 
   const {
     name,
@@ -16,77 +21,73 @@ const createDeal = asynchandler(async (req, res) => {
     discount,
     unitsLeft,
     img,
-    // note: clients must NOT supply start/end times — server enforces 24h window
     categories = [],
-    companyId,
+    targetId, // Unified ID for either Company or Branch
     paymentAmount,
   } = req.body;
 
-  if (!name || originalPrice == null || dealPrice == null || discount == null || unitsLeft == null || !img) {
-    return res.status(400).json({ success: false, message: 'Missing required deal fields' });
+  if (!name || !targetId || !paymentAmount || !img) {
+    return res.status(400).json({ success: false, message: 'Missing required fields' });
   }
 
-  // Determine company context
-  let targetCompanyId = companyId;
-  if (actorType === 'CompanyUser' && actor.companyId) targetCompanyId = actor.companyId;
-  if (!targetCompanyId) return res.status(400).json({ success: false, message: 'companyId is required' });
+  // 1. Identify if targetId is a Branch or a Company
+  let entity = await Branch.findById(targetId).exec();
+  let entityType = 'Branch';
 
-  // Authorization: only Admin (platform) or company admin/manager can create deals
+  if (!entity) {
+    entity = await Company.findById(targetId).exec();
+    entityType = 'Company';
+  }
+
+  if (!entity) {
+    return res.status(404).json({ success: false, message: 'No Company or Branch found with this ID' });
+  }
+
+  // 2. Authorization Logic
   if (actorType === 'CompanyUser') {
     const role = actor.Role || 'staff';
     if (!(role === 'admin' || role === 'manager')) {
-      return res.status(403).json({ success: false, message: 'Only company admin or manager can create deals' });
+      return res.status(403).json({ success: false, message: 'Unauthorized role' });
     }
-  } else if (actorType !== 'Admin') {
-    return res.status(403).json({ success: false, message: 'Unauthorized to create deals' });
   }
 
-  // Require a payment amount for deal creation (the fee)
-  const fee = Number(paymentAmount || 0);
-  if (isNaN(fee) || fee <= 0) return res.status(400).json({ success: false, message: 'paymentAmount must be provided and > 0' });
-
-  // ensure company exists
-  const company = await Company.findById(targetCompanyId).exec();
-  if (!company) return res.status(404).json({ success: false, message: 'Company not found' });
-
-  // Server-controlled start and end times: start = now, end = now + 24h
+  // 3. Create the Deal
   const now = new Date();
-  const startTime = now;
-  const endTime = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-
-  // Create deal product — ignore any client-supplied start/end times
   const deal = await DealProduct.create({
     name,
-    company: company.CompanyName || String(company._id),
+    ownerName: entity.BranchName || entity.CompanyName,
+    ownerId: entity._id,
+    ownerType: entityType, 
     originalPrice: Number(originalPrice),
     dealPrice: Number(dealPrice),
     discount: Number(discount),
     unitsLeft: Number(unitsLeft),
     img,
-    totalUnits: Number(unitsLeft) || 0,
-    startTime,
-    dealEndTime: endTime,
+    startTime: now,
+    dealEndTime: new Date(now.getTime() + 24 * 60 * 60 * 1000),
     categories,
     isActive: true,
   });
 
-  // Record transaction (deal creation payment)
+  // 4. Record Transaction
   await Transaction.create({
     Transactiontype: 'income',
-    amount: fee,
-    username: actor.Username || actor.Username || 'unknown',
-    userRole: actorType === 'CompanyUser' ? (actor.Role || 'staff') : 'Admin',
-    description: `Deal creation fee for ${deal._id}`,
-    company: company._id,
+    amount: Number(paymentAmount),
+    username: actor.Username || 'unknown',
+    description: `Deal fee for ${entityType}: ${entity._id}`,
+    [entityType === 'Branch' ? 'branch' : 'company']: entity._id,
   });
 
-  // Link deal id to company (store singularly or update existing field)
-  company.DealsId = deal._id;
-  await company.save();
+  // 5. Update the entity safely
+  // FIX: We use findByIdAndUpdate to avoid triggering validation errors on existing bad data (like 'slug')
+  if (entityType === 'Branch') {
+    await Branch.findByIdAndUpdate(entity._id, { DealsId: deal._id });
+  } else {
+    await Company.findByIdAndUpdate(entity._id, { DealsId: deal._id });
+  }
 
   return res.status(201).json({ success: true, deal });
 });
-
 const listDeals = asynchandler(async (req, res) => {
   const now = new Date();
   // mark expired deals as inactive (keep them in DB)

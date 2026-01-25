@@ -497,6 +497,8 @@ apiRoutes.use("/Get/GetAdminCompany", require("./Routes/GetAdmincompany"));
 
 apiRoutes.use("/User/Order", require("./Routes/Order"));
 
+apiRoutes.use("/paystack", require("./Routes/Paystack"));
+
 apiRoutes.use("/updateOrderStatus", require("./Routes/UpdateOrder"));
 
 apiRoutes.use("/UserOrders", require("./Routes/GetUserOrders"));
