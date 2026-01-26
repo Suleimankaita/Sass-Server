@@ -6,6 +6,7 @@ const Branch = require('../Models/Branch');
 const Company = require('../Models/Company');
 const Admin = require('../Models/AdminOwner');
 const User = require('../Models/CompanyUsers');
+const ecomUser = require('../Models/User');
 const Logs = require('../Models/UserLog');
 const POSProduct = require('../Models/POSProduct'); 
 const EcomerceProducts = require('../Models/EcomerceProducts'); 
@@ -36,7 +37,7 @@ const ProcessSale = asyncHandler(async (req, res) => {
         let seller = await Branch.findById(sellerId) || await Company.findById(sellerId);
         let sellerType = (await Branch.exists({ _id: sellerId })) ? 'Branch' : 'Company';
         console.log(sellerType)
-        let actor = await Admin.findById(actorId).populate('UserProfileId') || await User.findById(actorId).populate('UserProfileId');
+        let actor = await Admin.findById(actorId).populate('UserProfileId') || await User.findById(actorId).populate('UserProfileId')||await ecomUser.findById(actorId).populate('UserProfileId');
         let actorType = (await Admin.exists({ _id: actorId })) ? 'Admin' : 'User';
 
         

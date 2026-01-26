@@ -15,8 +15,8 @@ function generateOrderId() {
 const createOrder = asyncHandler(async (req, res) => {
     const {
         Username,
-        companyId,
-        branchId,
+        companyId, // Array of IDs from frontend
+        branchId,  // Array of IDs from frontend
         Customer = {},
         items = [],
         shippingCost = 0,
@@ -24,50 +24,36 @@ const createOrder = asyncHandler(async (req, res) => {
         delivery = {} 
     } = req.body;
 
-    // --- 1. Validations ---
-    if (!Username) {
-        return res.status(400).json({ success: false, message: 'Username is required' });
-    }
+    // --- 1. Basic Validations ---
+    if (!Username) return res.status(400).json({ success: false, message: 'Username is required' });
     if (!Array.isArray(items) || items.length === 0) {
         return res.status(400).json({ success: false, message: 'Order must contain items' });
     }
 
-    // --- 2. Fetch User and Entities ---
     const user = await User.findOne({ Username }).populate('UserProfileId').exec();
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
-    // FIX: Handle ID whether it comes as a string or an array of strings
-    const targetCompId = Array.isArray(companyId) ? companyId[0] : companyId;
-    const targetBranchId = Array.isArray(branchId) ? branchId[0] : branchId;
-
-    let company = targetCompId ? await Company.findById(targetCompId) : null;
-    let branch = targetBranchId ? await Branch.findById(targetBranchId) : null;
-
-    // Logic: If we have a branch but no company, try to infer company from branch
-    if (branch && !company && branch.CompanyId) {
-        company = await Company.findById(branch.CompanyId);
-    }
-
-    // --- 3. Prepare Items & Calculate Totals ---
+    // --- 2. Process Items and Link IDs ---
     let subtotal = 0;
     const salesToCreate = [];
     const orderItems = [];
+    const uniqueCompanyIds = new Set();
+    const uniqueBranchIds = new Set();
 
-    // Process items Loop (Sync validation first)
-    for (const it of items) {
-        const price = Number(it.soldAtPrice);
-        const quantity = Number(it.quantity || it.qty);
+    items.forEach((it, index) => {
+        // Safe extraction: if companyId is an array, take index. If string, take string.
+        const cId = Array.isArray(companyId) ? companyId[index] : companyId;
+        const bId = Array.isArray(branchId) ? branchId[index] : branchId;
 
-        if (isNaN(price) || price <= 0) {
-            return res.status(400).json({ success: false, message: `Invalid price for ${it.ProductName}` });
-        }
-        if (isNaN(quantity) || quantity <= 0) {
-            return res.status(400).json({ success: false, message: `Invalid quantity for ${it.ProductName}` });
-        }
+        // Clean up: only add to sets if the ID actually exists
+        if (cId) uniqueCompanyIds.add(cId.toString());
+        if (bId) uniqueBranchIds.add(bId.toString());
 
+        const price = Number(it.soldAtPrice) || 0;
+        const quantity = Number(it.quantity || it.qty) || 0;
         subtotal += price * quantity;
 
-        // Prepare Sale Object (Do not save yet)
+        // Prepare Sale (Specific to this item's company/branch)
         salesToCreate.push({
             name: it.ProductName,
             soldAtPrice: price,
@@ -76,12 +62,12 @@ const createOrder = asyncHandler(async (req, res) => {
             quantity,
             TransactionType: 'Order',
             actualPrice: it.actualPrice || 0,
-            companyId: company?._id,
-            branchId: branch?._id,
-            date: new Date() // Ensure sales have a timestamp
+            companyId: cId || null,
+            branchId: bId || null,
+            date: new Date()
         });
 
-        // Prepare Order Item Object
+        // Prepare Order Item
         orderItems.push({
             productId: it.productId || null,
             ProductName: it.ProductName || '',
@@ -89,88 +75,87 @@ const createOrder = asyncHandler(async (req, res) => {
             Price: price,
             quantity,
             sku: it.sku || '',
-            variant: it.variant || ''
+            variant: it.variant || '',
+            companyId: cId || null, // Link at item level
+            branchId: bId || null
         });
-    }
+    });
 
-    // --- 4. Database Writes ---
-    
-    // A. Create All Sales in one batch (Performance Update)
+    // --- 3. Database Writes ---
     const createdSales = await Sale.insertMany(salesToCreate);
     const saleIds = createdSales.map(s => s._id);
 
-    // B. Calculate Finals
-    const shipping = Number(shippingCost);
-    const taxAmt = Number(tax);
-    const total = subtotal + shipping + taxAmt;
+    const total = subtotal + Number(shippingCost) + Number(tax);
 
-    // C. Create Order
-    const orderPayload = {
+    const createdOrder = await Order.create({
         orderId: generateOrderId(), 
         Username,
         Customer,
-        companyId: company?._id,
-        branchId: branch?._id,
+        // Store all unique companies/branches involved in this multi-vendor order
+        companyId: Array.from(uniqueCompanyIds), 
+        branchId: Array.from(uniqueBranchIds),
         items: orderItems,
         subtotal,
-        shippingCost: shipping,
-        tax: taxAmt,
+        shippingCost,
+        tax,
         total,
         delivery: {
             location: {
-                // Check delivery.lat OR delivery.location.lat to be safe
                 lat: delivery?.lat || delivery?.location?.lat || null,
                 lng: delivery?.lng || delivery?.location?.lng || null
             }
         }
-    };
+    });
 
-    const createdOrder = await Order.create(orderPayload);
+    // --- 4. Update Relationships (The Fix) ---
+    const updatePromises = [];
 
-    // --- 5. Update Relationships ---
-
-    // Update User Profile
-    if (!user.UserProfileId) {
-        const fullName = [user.Firstname, user.Lastname].filter(Boolean).join(' ').trim();
-        const newProfile = await UserProfile.create({ 
-            Email: user.Username, 
-            fullName, 
-            orders: [createdOrder._id] 
-        });
-        
-        // Link profile back to user
-        user.UserProfileId = newProfile._id;
-        await user.save();
-    } else {
-        await UserProfile.findByIdAndUpdate(user.UserProfileId, {
+    // User Update
+    if (user.UserProfileId) {
+        updatePromises.push(UserProfile.findByIdAndUpdate(user.UserProfileId, {
             $push: { orders: createdOrder._id }
-        });
+        }));
     }
 
-    // Update Company
-    if (company) {
-        await Company.findByIdAndUpdate(company._id, {
+    // Company Updates: Only update if valid IDs exist
+    uniqueCompanyIds.forEach(id => {
+        if (!id || id === "null") return; // Skip invalid IDs
+        
+        // Find sales belonging ONLY to this specific company
+        const companySales = createdSales
+            .filter(s => s.companyId && s.companyId.toString() === id)
+            .map(s => s._id);
+
+        updatePromises.push(Company.findByIdAndUpdate(id, {
             $push: { 
                 Orders: createdOrder._id, 
-                SaleId: { $each: saleIds } // $each is required when pushing an array
+                SaleId: { $each: companySales } 
             }
-        });
-    }
+        }));
+    });
 
-    // Update Branch
-    if (branch) {
-        await Branch.findByIdAndUpdate(branch._id, {
+    // Branch Updates: Only update if valid IDs exist
+    uniqueBranchIds.forEach(id => {
+        if (!id || id === "null") return;
+
+        const branchSales = createdSales
+            .filter(s => s.branchId && s.branchId.toString() === id)
+            .map(s => s._id);
+
+        updatePromises.push(Branch.findByIdAndUpdate(id, {
             $push: { 
                 Orders: createdOrder._id, 
-                SaleId: { $each: saleIds } 
+                SaleId: { $each: branchSales } 
             }
-        });
-    }
+        }));
+    });
 
-    // --- 6. Response ---
+    await Promise.all(updatePromises);
+
+    // --- 5. Return Populated Result ---
     const populatedOrder = await Order.findById(createdOrder._id)
-        .populate('companyId') // Good practice to limit fields if possible
-        .populate('branchId');
+        .populate('companyId', 'name')
+        .populate('branchId', 'name');
 
     return res.status(201).json({ success: true, data: populatedOrder });
 });

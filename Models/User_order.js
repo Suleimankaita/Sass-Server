@@ -3,9 +3,15 @@ const mongoose = require("mongoose");
 const OrderSchema = new mongoose.Schema(
   {
     orderId: { type: String, unique: true }, // Needed for your React table
-    companyId: { type: mongoose.Schema.Types.ObjectId, ref: "Company", index: true },
-    branchId: { type: mongoose.Schema.Types.ObjectId, ref: "Branch", index: true },
-
+  // Inside your Order Schema definition
+companyId: [{ 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'Company' 
+}],
+branchId: [{ 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'Branch' 
+}],
     Username: String, 
 
     Customer: { 
