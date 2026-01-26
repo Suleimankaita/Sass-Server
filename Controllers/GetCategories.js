@@ -5,26 +5,29 @@ exports.getCategories = async (req, res) => {
     try {
         const { companyId, branchId } = req.query;
         let data;
-
-        if (branchId) {
+        // console.log(companyId)
+        // if (companyId) {
             // Find branch and populate the CategoriesId array
-            data = await Branch.findById(branchId)
+            data = await Branch.findById(companyId)
                 .select("CategoriesId CompanyName") // Only get necessary fields
-                .populate("CategoriesId");
-            
-            if (!data) return res.status(404).json({ message: "Branch not found" });
-        } 
-        else if (companyId) {
-            // Find company and populate the CategoriesId array
-            data = await Company.findById(companyId)
+                .populate("CategoriesId")|| await Company.findById(companyId)
                 .select("CategoriesId CompanyName")
                 .populate("CategoriesId");
+;
+            
+            // if (!data) return res.status(404).json({ message: "Branch not found" });
+        // } 
+        // else if (companyId) {
+            // Find company and populate the CategoriesId array
+            // data = await Company.findById(companyId)
+            //     .select("CategoriesId CompanyName")
+            //     .populate("CategoriesId");
 
-            if (!data) return res.status(404).json({ message: "Company not found" });
-        } 
-        else {
-            return res.status(400).json({ message: "Please provide a branchId or companyId" });
-        }
+        //     if (!data) return res.status(404).json({ message: "Company not found" });
+        // } 
+        // else {
+        //     return res.status(400).json({ message: "Please provide a branchId or companyId" });
+        // }
 
         return res.status(200).json({
             success: true,

@@ -486,7 +486,9 @@ apiRoutes.use("/GetCategories", require("./Routes/GetCategory"));
 apiRoutes.use("/GetTotalUsers", require("./Routes/GetAllcompanyUsers"));
 
 apiRoutes.use("/Get/Branch", require("./Routes/GetBranch"));
-apiRoutes.use("/Get/GetBranchUsers", require("./Routes/GetBranchUsers"));
+
+apiRoutes.use("/GetUserprofile", require("./Routes/UserProfile"));
+
 apiRoutes.use("/GetShops", require("./Routes/GetShops"));
 
 apiRoutes.use("/api/CompanyUserAuth", require("./Routes/CompanyUsersAuth"));
