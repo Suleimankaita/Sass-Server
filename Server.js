@@ -491,6 +491,8 @@ apiRoutes.use("/GetUserprofile", require("./Routes/UserProfile"));
 
 apiRoutes.use("/GetShops", require("./Routes/GetShops"));
 
+apiRoutes.use("/EditUserProfile", upload.single("profileImage"), require("./Routes/UpdateProfile"));
+
 apiRoutes.use("/api/CompanyUserAuth", require("./Routes/CompanyUsersAuth"));
 
 apiRoutes.use("/api/CompanyAuth", require("./Routes/CompanyAuth"));
