@@ -254,6 +254,14 @@ const createOrderDebug = asyncHandler(async (req, res) => {
     }
 });
 
+const findOrder=asyncHandler(async(req,res)=>{
+    const {id} =req.params;
+    if(!id)return res.status(400).json({'message':'Orderid is required'});
+    
+    const foundOrder=await Order.findById(id);
+    res.status(201).json(foundOrder)
+})
+
 module.exports = {
     createOrder,
     getOrder,
@@ -261,5 +269,6 @@ module.exports = {
     updateOrderStatus,
     createOrderDebug,
     getUserOrders,
-    getCompanyOrder
+    getCompanyOrder,
+    findOrder
 };

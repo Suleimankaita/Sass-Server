@@ -121,6 +121,7 @@ const allowedOrigins = [
      'http://localhost:5173',
      'http://172.20.10.2:5173',
   'http://127.0.0.1:5173',
+  "https://172.20.10.2:5173/",
   'https://your-production-domain.com'
 ];
 
@@ -193,6 +194,9 @@ socketController(io);
 io.on("connection", (socket) => {
   // connected to worker
   // setInterval(() => {
+    socket.on('loc',(coords)=>{
+      console.log(coords)
+    })
     initCustomerCare(io);
     Getproducts(io);
     AllBracodeGetproducts(io);
@@ -411,10 +415,86 @@ if (event.data.status === "success") {
   })
 );
 
+const { performance } = require('perf_hooks');
 
+
+
+
+// --- DATA STORES ---
+const currentRequests = [];
+const metricsHistory = [];
+
+
+const HISTORY_LIMIT = 60; // last 10 minutes (10s intervals)
+
+
+// 1. Capture request metrics
+app.use((req, res, next) => {
+const start = performance.now();
+
+
+res.on('finish', () => {
+currentRequests.push({
+duration: performance.now() - start,
+isError: res.statusCode >= 400,
+});
+});
+
+
+next();
+});
+
+
+// 2. Snapshot every 10 seconds
+setInterval(() => {
+const total = currentRequests.length;
+
+
+let avgTime = 0;
+let errorRate = 0;
+
+
+if (total > 0) {
+const errors = currentRequests.filter(r => r.isError).length;
+const totalTime = currentRequests.reduce((sum, r) => sum + r.duration, 0);
+
+
+avgTime = totalTime / total;
+errorRate = (errors / total) * 100;
+}
+
+
+const snapshot = {
+timestamp: Date.now(), // numeric (best for charts)
+responseTime: avgTime, // number (ms)
+errorRate: errorRate // number (%)
+};
+
+
+metricsHistory.push(snapshot);
+
+
+if (metricsHistory.length > HISTORY_LIMIT) {
+metricsHistory.shift();
+}
+
+
+// clear bucket safely
+currentRequests.length = 0;
+
+
+}, 10000);
+
+
+// 3. API endpoint
+app.get('/metrics/history', (req, res) => {
+res.json(metricsHistory);
+});
 apiRoutes.use("/", require("./Routes/GetEcomerceProdoucts"));
 
 apiRoutes.use("/GetSingleEcom", require("./Routes/GetSingleEconmerceProduct"));
+
+apiRoutes.use("/GetAllOrders", require("./Routes/GetAllOrders"));
 
 apiRoutes.use("/AddProducts",upload.array('file'), require("./Routes/AddProducts"));
 
@@ -490,6 +570,7 @@ apiRoutes.use("/Get/Branch", require("./Routes/GetBranch"));
 apiRoutes.use("/GetUserprofile", require("./Routes/UserProfile"));
 
 apiRoutes.use("/GetShops", require("./Routes/GetShops"));
+apiRoutes.use("/full-snapshot", require("./Routes/MongodbAnalitics"));
 
 apiRoutes.use("/EditUserProfile", upload.single("profileImage"), require("./Routes/UpdateProfile"));
 
@@ -500,6 +581,8 @@ apiRoutes.use("/api/CompanyAuth", require("./Routes/CompanyAuth"));
 apiRoutes.use("/Get/GetAdminCompany", require("./Routes/GetAdmincompany"));
 
 apiRoutes.use("/User/Order", require("./Routes/Order"));
+
+apiRoutes.use("/Exipre", require("./Routes/GetcompanyExpreDate"));
 
 apiRoutes.use("/paystack", require("./Routes/Paystack"));
 

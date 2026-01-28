@@ -1,8 +1,10 @@
 const allowedOrigins = [
   'http://localhost:5173',
+  'https://localhost:5173',
   'http://127.0.0.1:5173',
   "http://172.20.10.2:5173",
   'http://127.0.0.1:5500',
+  "https://172.20.10.2:5173/",
   'https://your-production-domain.com'
 ];
 
