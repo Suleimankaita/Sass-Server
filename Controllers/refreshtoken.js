@@ -13,9 +13,9 @@ const Branch = require("../Models/Branch");
 const resolveAccount = async (role, id) => {
     console.log(23 ,role ,id)
   switch (role) {
-    // case "SuperAdmin":
-    //   return Admin.findById(id).populate('companyId').populate("UserProfileId").select("+refreshToken Active Verified ");
-    case "Admin":
+    case "SuperAdmin":
+      return Admin.findById(id).populate('companyId').populate("UserProfileId").select("+refreshToken Active Verified ");
+    case "Admin"||"admin":
       return Admin.findById(id).populate('companyId').populate("UserProfileId").select("+refreshToken Active Verified ");
     // case 'manager'||'staff'||'cashier':
     case 'cashier':

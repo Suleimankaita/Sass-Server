@@ -119,6 +119,7 @@ app.use(morgan(IS_PRODUCTION ? "combined" : "dev"));
 
 const allowedOrigins = [
      'http://localhost:5173',
+  "http://172.20.10.6:3500",
      'http://172.20.10.2:5173',
   'http://127.0.0.1:5173',
   "https://172.20.10.2:5173/",
@@ -570,11 +571,21 @@ apiRoutes.use("/Get/Branch", require("./Routes/GetBranch"));
 apiRoutes.use("/GetUserprofile", require("./Routes/UserProfile"));
 
 apiRoutes.use("/GetShops", require("./Routes/GetShops"));
+
 apiRoutes.use("/full-snapshot", require("./Routes/MongodbAnalitics"));
+
+apiRoutes.use("/GetIventoryData", require("./Routes/GetInventoryData"));
+
+apiRoutes.use("/AuditLogs", require("./Routes/AuditLogs"));
+
+app.use("/ForceLogOut",require('./Routes/GlobalForceLogout'));
+
 
 apiRoutes.use("/EditUserProfile", upload.single("profileImage"), require("./Routes/UpdateProfile"));
 
 apiRoutes.use("/api/CompanyUserAuth", require("./Routes/CompanyUsersAuth"));
+
+apiRoutes.use("/AllUsers", require("./Routes/AllUsers"));
 
 apiRoutes.use("/api/CompanyAuth", require("./Routes/CompanyAuth"));
 

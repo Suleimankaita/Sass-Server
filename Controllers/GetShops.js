@@ -69,6 +69,7 @@ const GetSingleShop = asyncHandler(async (req, res) => {
     // 3. Try to find as a Company first
     let entity = await Company.findById(id)
         .populate('EcomerceProducts')
+        .populate('SaleId')
         .populate({ path: 'BranchId', model: 'Branch' })
         .lean()
         .exec();
@@ -79,6 +80,7 @@ const GetSingleShop = asyncHandler(async (req, res) => {
     if (!entity) {
         entity = await Branch.findById(id)
             .populate('EcomerceProducts')
+            .populate('SaleId')
             .lean()
             .exec();
         type = 'branch';

@@ -21,6 +21,7 @@ const createOrder = asyncHandler(async (req, res) => {
         items = [],
         shippingCost = 0,
         tax = 0,
+        paymentReference,
         delivery = {} 
     } = req.body;
 
@@ -64,7 +65,8 @@ const createOrder = asyncHandler(async (req, res) => {
             actualPrice: it.actualPrice || 0,
             companyId: cId || null,
             branchId: bId || null,
-            date: new Date()
+            date: new Date(),
+            paymentReference,
         });
 
         // Prepare Order Item
@@ -74,6 +76,7 @@ const createOrder = asyncHandler(async (req, res) => {
             ProductImg: Array.isArray(it.ProductImg) ? it.ProductImg : [it.ProductImg],
             Price: price,
             quantity,
+            paymentReference,
             sku: it.sku || '',
             variant: it.variant || '',
             companyId: cId || null, // Link at item level
