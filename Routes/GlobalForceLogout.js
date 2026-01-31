@@ -14,18 +14,18 @@ router.post(
 );
 
 // 2. Selective force logout - Clear tokens by user type
-// router.post(
-//   '/selective',
-//   authenticate,
-//   GlobalForceLogoutController.clearTokensByUserType
-// );
+router.post(
+  '/selective',
+  authenticate,
+  GlobalForceLogoutController.clearTokensByUserType
+);
 
-// // 3. Individual force logout - Clear token for specific user
-// router.post(
-//   '/individual',
-//   authenticate,
-//   GlobalForceLogoutController.clearTokenByUserId
-// );
+// 3. Individual force logout - Clear token for specific user
+router.post(
+  '/individual',
+  authenticate,
+  GlobalForceLogoutController.clearTokenByUserId
+);
 
 // 4. Get force logout statistics
 // router.get(

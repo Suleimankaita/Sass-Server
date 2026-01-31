@@ -46,6 +46,7 @@ const UserProfileSchema = new mongoose.Schema(
 
     // Products & Cart
     ecommerceProducts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Products" }],
+    NotificationId: [{ type: mongoose.Schema.Types.ObjectId, ref: "Notification" }],
     posProducts: [{ type: mongoose.Schema.Types.ObjectId, ref: "POSProducts" }],
     cart: { type: mongoose.Schema.Types.ObjectId, ref: "Cart", default: null },
     CartId: { type: mongoose.Schema.Types.ObjectId, ref: "Cart", default: null },

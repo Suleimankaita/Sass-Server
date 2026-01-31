@@ -3,7 +3,7 @@ const router = express.Router();
 const controller = require('../Controllers/Notification');
 const Verify=require('../Middleware/Verify')
 
-router.post('/', Verify,controller.create);
+router.post('/', controller.create);
 router.put('/:id', Verify,controller.update);
 router.post('/:id/cancel', Verify,controller.cancel);
 router.post('/:id/send', Verify,controller.sendNow);

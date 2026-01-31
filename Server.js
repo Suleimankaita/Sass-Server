@@ -14,6 +14,7 @@ const {Getproducts}=require("./Controllers/Getproducts")
 const {GetUserSaleData}=require("./Controllers/GetUserSaleData")
 const {GetBranchproducts}=require("./Controllers/GetBranchProducts")
 const {AllBracodeGetproducts}=require("./Controllers/AllProductsBarcode")
+const initNotificationCron= require("./Controllers/initNotificationCron")
 const { Server } = require("socket.io");
 const socketController=require("./Controllers/UpdateDeliveryProduct");
 const { initCustomerCare } = require('./Controllers/ticketSocket');
@@ -169,7 +170,10 @@ app.use("/api", limiter);
        return console.log(`[Master] Gateway listening on port ${PORT}`);
     });
 
-
+    // app.use((req, res, next) => {
+   initNotificationCron()
+//       next();
+// });
 /**
  * 3. SOCKET.IO SETUP (CLUSTERED)
  */
@@ -198,7 +202,12 @@ io.on("connection", (socket) => {
     socket.on('loc',(coords)=>{
       console.log(coords)
     })
+    
     initCustomerCare(io);
+    // setInterval(() => {
+      
+    //   initNotificationCron(io);
+    // }, 1000);
     Getproducts(io);
     AllBracodeGetproducts(io);
     GetUserSaleData(io);
