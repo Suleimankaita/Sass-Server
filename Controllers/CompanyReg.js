@@ -1,93 +1,118 @@
-const asynchandler = require('express-async-handler');
-const Company = require('../Models/Company');
-const Logss = require('../Models/UserLog');
-const Admin = require('../Models/AdminOwner');
+const asyncHandler = require('express-async-handler');
+const bcrypt = require('bcryptjs');
 
+const Company = require('../Models/Company');
+const Logs = require('../Models/UserLog');
+const Admin = require('../Models/AdminOwner');
+const Settings = require('../Models/CompanySetting');
 
 // 🟢 COMPANY REGISTRATION
-const CompanyRegs = asynchandler(async (req, res) => {
-  try {
-    const {
-      Username,
-      Password,
-      Firstname,
-      Lastname,
-      Adminid,
+const CompanyRegs = asyncHandler(async (req, res) => {
+  const {
+    Username,
+    Password,
+    Firstname,
+    Lastname,
+    Adminid,
+    StreetName,
+    PostalNumber,
+    Lat,
+    Long,
+    Email,
+    CompanyName,
+    CAC_Number,
+  } = req.body;
+
+  // 🔴 Required fields validation
+  if (
+    !Username ||
+    !Password ||
+    !Firstname ||
+    !Lastname ||
+    !Email ||
+    !CompanyName ||
+    !CAC_Number
+  ) {
+    return res.status(400).json({ message: 'All required fields must be provided' });
+  }
+
+  // 🔍 Find admin (by id or username)
+  const adminFound = Adminid
+    ? await Admin.findById(Adminid)
+    : await Admin.findOne({ Username });
+
+  if (!adminFound) {
+    return res.status(404).json({ message: 'Admin not found' });
+  }
+
+  // 🔍 Check company name uniqueness (case-insensitive)
+  const companyExists = await Company.findOne({ CompanyName })
+    .collation({ locale: 'en', strength: 2 });
+
+  if (companyExists) {
+    return res.status(409).json({
+      message: `'${CompanyName}' already exists. You can register it as a branch instead.`,
+    });
+  }
+
+  // 🔐 Hash password
+  const hashedPassword = await bcrypt.hash(Password, 10);
+
+  // 🧾 Create audit log
+  const log = await Logs.create({
+    name: `${Firstname} ${Lastname}`,
+    Username,
+    action: 'COMPANY_REGISTRATION',
+    date: new Date(),
+  });
+
+  // 🏢 Create company
+  const newCompany = await Company.create({
+    Username,
+    Password: hashedPassword,
+    Firstname,
+    Lastname,
+    Email: Email.toLowerCase(),
+    WalletNumber: Math.floor(100000 + Math.random() * 900000),
+    Address: {
       StreetName,
       PostalNumber,
       Lat,
       Long,
-      Email,
-      CompanyName,
-      CAC_Number,
-    } = req.body;
+    },
+    CompanyName,
+    CAC_Number,
+    UserLog: log._id,
 
-    console.log(req.files)
-    console.log(req.body)
-    if (!Username || !Password || !Firstname || !Lastname || !Email || !CompanyName || !CAC_Number)
-      return res.status(400).json({ message: 'All fields are required' });
+    // Trial configuration
+    trialStartDate: new Date(),
+    trialEndDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    subscriptionStatus: 'trial',
+    isSubscribed: false,
 
-    const adminFound=await Admin.findOne({Username}).exec()
-    if(!adminFound)return res.status(400).json({'message':'Admin not Found'})
-    const found = await Company.findOne({ CompanyName })
-      .collation({ strength: 2, locale: 'en' })
-      .lean()
-      .exec();
+    // Limits
+    maxBranches: 1,
+    branchesCreated: 0,
+    maxUsers: 5,
+    usersCreated: 0,
+  });
 
-    if (found)
-      return res
-        .status(409)
-        .json({ message: `'${CompanyName}' is already used by another company. You can make it as a branch` });
+  // ⚙️ Create company settings
+  await Settings.create({
+    businessName: CompanyName,
+    companyId: newCompany._id,
+  });
 
-       const id=   await Logss.create({
-     
-          name: `${Firstname} ${Lastname}`,
-          Username,
-          Password,
-          Date: new Date().toISOString(),
-          time: new Date().toLocaleTimeString(),
-     
-    });
+  // 🔗 Attach company to admin
+  adminFound.companyId = newCompany._id;
+  await adminFound.save();
 
-    const newCompany = await Company.create({
-      Username,
-      Password,
-      Firstname,
-      Lastname,
-      Email,
-      WalletNumber: Math.floor(Math.random() * 90000) + 10000,
-      Address: {
-        StreetName,
-        PostalNumber,
-        Lat,
-        Long,
-      },
-      CompanyName,
-      CAC_Number,
-      UserLog:id._id,
-      // Trial configuration - 7 days from now
-      trialStartDate: new Date(),
-      trialEndDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      subscriptionStatus: 'trial',
-      isSubscribed: false,
-      // Default limits for trial/free plan: 1 branch, 5 users
-      maxBranches: 1,
-      branchesCreated: 0,
-      maxUsers: 5,
-      usersCreated: 0,
-    });
-
-    console.log(newCompany)
-    adminFound.companyId=newCompany._id
-    await adminFound.save()
-    res.status(201).json({
-      message: `New Company '${Username}' created successfully`,
-      company: newCompany,
-      status: 201,
-    });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
+  // ✅ Success response
+  res.status(201).json({
+    success: 201,
+    message: `Company '${CompanyName}' registered successfully`,
+    companyId: newCompany._id,
+  });
 });
 
 module.exports = CompanyRegs;

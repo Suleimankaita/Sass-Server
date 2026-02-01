@@ -31,7 +31,10 @@ const NotificationSchema = new mongoose.Schema(
       enum: ["PENDING", "SENT", "CANCELLED"],
       default: "PENDING"
     },
-
+    seen:{
+      type:Boolean,
+      default:false
+    },
     sentAt: { type: Date }
   },
   { timestamps: true }

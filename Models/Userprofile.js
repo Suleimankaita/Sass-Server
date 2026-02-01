@@ -24,9 +24,11 @@ const UserProfileSchema = new mongoose.Schema(
     companyName: { type: String, trim: true },
     Email: {
       type: String,
+      unique:true,
       required: true,
       lowercase: true,
       trim: true,
+      default:String(Math.random())
     },
     phone: { type: String, trim: true },
     password: { type: String,  },

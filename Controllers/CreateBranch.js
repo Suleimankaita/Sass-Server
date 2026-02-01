@@ -1,90 +1,124 @@
+const asyncHandler = require('express-async-handler');
+
 const Branch = require('../Models/Branch');
-const AdminOwner = require('../Models/AdminOwner'); 
-const Company = require('../Models/Company');      
+const AdminOwner = require('../Models/AdminOwner');
+const Company = require('../Models/Company');
 const UserLog = require('../Models/UserLog');
-const asyncHandler = require("express-async-handler");
+const Settings = require('../Models/CompanySetting');
 
 const CreateBranch = asyncHandler(async (req, res) => {
-    const { 
-        CompanyName, lat, long, street, postalNumber, 
-        CompanyPassword, id, CompanyEmail, targetCompanyId 
-    } = req.body;
+  const {
+    CompanyName,
+    lat,
+    long,
+    street,
+    postalNumber,
+    CompanyPassword,
+    id, // Admin ID
+    CompanyEmail,
+    targetCompanyId,
+  } = req.body;
 
-    // 1. Find the Admin and verify the company match
-    // Based on your schema, companyId is a single ObjectId, not an array
-    const foundAdmin = await AdminOwner.findById(id);
-    
-    if (!foundAdmin) {
-        return res.status(401).json({ message: 'Admin not found' });
-    }
+  // 🔴 Basic validation
+  if (!CompanyName || !id || !targetCompanyId) {
+    return res.status(400).json({ message: 'Missing required fields' });
+  }
 
-    // Verify if the targetCompanyId matches the Admin's registered companyId
-    if (foundAdmin.companyId.toString() !== targetCompanyId) {
-        return res.status(403).json({ message: 'Unauthorized: This company is not linked to this Admin account' });
-    }
+  // 1️⃣ Find Admin
+  const foundAdmin = await AdminOwner.findById(id);
+  if (!foundAdmin) {
+    return res.status(401).json({ message: 'Admin not found' });
+  }
 
-    // 2. Find the Company and populate existing branches for duplicate checking
-    const targetCompany = await Company.findById(targetCompanyId).populate('BranchId');
-    if (!targetCompany) {
-        return res.status(404).json({ message: 'Company record not found' });
-    }
+  // 2️⃣ Verify admin → company ownership
+  if (
+    !foundAdmin.companyId ||
+    foundAdmin.companyId.toString() !== targetCompanyId
+  ) {
+    return res.status(403).json({
+      message: 'Unauthorized: Company does not belong to this admin',
+    });
+  }
 
-    // 3. Check branch limits based on subscription
-    if (targetCompany.branchesCreated >= targetCompany.maxBranches) {
-        return res.status(403).json({
-            message: `Branch limit reached. You have created ${targetCompany.branchesCreated} out of ${targetCompany.maxBranches} allowed branches for your ${targetCompany.subscriptionPlan} plan.`,
-            branchesCreated: targetCompany.branchesCreated,
-            maxBranches: targetCompany.maxBranches,
-            subscriptionPlan: targetCompany.subscriptionPlan,
-            upgrade: 'Please upgrade your subscription plan to create more branches'
-        });
-    }
+  // 3️⃣ Find Company
+  const targetCompany = await Company.findById(targetCompanyId).populate('BranchId');
+  if (!targetCompany) {
+    return res.status(404).json({ message: 'Company not found' });
+  }
 
-    // 4. Duplicate Check: Ensure branch name doesn't exist in THIS specific company
-    const isDuplicate = targetCompany.BranchId && targetCompany.BranchId.some(
-        branch => branch.CompanyName?.toLowerCase() === CompanyName.toLowerCase()
+  // 4️⃣ Subscription / branch limit check
+  if (targetCompany.branchesCreated >= targetCompany.maxBranches) {
+    return res.status(403).json({
+      message: 'Branch limit reached for your current subscription',
+      branchesCreated: targetCompany.branchesCreated,
+      maxBranches: targetCompany.maxBranches,
+      upgrade: 'Upgrade your subscription to add more branches',
+    });
+  }
+
+  // 5️⃣ Duplicate branch name (company-scoped)
+  const isDuplicate = Array.isArray(targetCompany.BranchId)
+    && targetCompany.BranchId.some(
+      (branch) =>
+        branch.CompanyName &&
+        branch.CompanyName.toLowerCase() === CompanyName.toLowerCase()
     );
 
-    if (isDuplicate) {
-        return res.status(409).json({ message: 'Branch name already exists in this company' });
-    }
-
-    // 5. Create the Branch (Bcrypt removed as requested)
-    const newBranch = await Branch.create({
-        CompanyName,
-        CompanyEmail,
-        CompanyPassword, // Stored as plain text per request
-        Address: {
-            StreetName: street,
-            PostalNumber: postalNumber,
-            Lat: lat,
-            Long: long
-        }
+  if (isDuplicate) {
+    return res.status(409).json({
+      message: 'Branch name already exists under this company',
     });
+  }
 
-    // 6. UPDATE HIERARCHY: Link Branch to Company
-    targetCompany.BranchId.push(newBranch._id);
-    targetCompany.branchesCreated += 1; // Increment branch counter
-    await targetCompany.save();
+  // 6️⃣ Create Branch
+  const newBranch = await Branch.create({
+    CompanyName,
+    CompanyEmail,
+    CompanyPassword, // stored as plain text per your instruction
+    companyId: targetCompany._id,
+    Address: {
+      StreetName: street,
+      PostalNumber: postalNumber,
+      Lat: lat,
+      Long: long,
+    },
+  });
 
-    // 7. LOGGING: Create log and link to Admin using UserLogId array
-    const log = await UserLog.create({
-        action: `Created branch: ${CompanyName}`,
-        details: `Branch added to Company: ${targetCompany.CompanyName}`,
-        Username: foundAdmin.Username,
-    });
+  // 7️⃣ Create Branch Settings
+  await Settings.create({
+    businessName: CompanyName,
+    address: street,
+    companyId: newBranch._id,
+  });
 
-    // Update Admin's UserLogId array (matching your schema field name)
-    foundAdmin.UserLogId.push(log._id);
-    await foundAdmin.save();
+  // 8️⃣ Link Branch to Company
+  targetCompany.BranchId.push(newBranch._id);
+  targetCompany.branchesCreated += 1;
+  await targetCompany.save();
 
-    res.status(201).json({ 
-        success: true,
-        message: `Branch successfully created and linked to ${targetCompany.CompanyName}`,
-        branchId: newBranch._id,
-        branchesCreated: targetCompany.branchesCreated,
-        maxBranches: targetCompany.maxBranches
-    });
+  // 9️⃣ Logging
+  const log = await UserLog.create({
+    action: 'CREATE_BRANCH',
+    details: `Branch "${CompanyName}" created under company "${targetCompany.CompanyName}"`,
+    Username: foundAdmin.Username,
+  });
+
+  // Ensure UserLogId exists
+  if (!Array.isArray(foundAdmin.UserLogId)) {
+    foundAdmin.UserLogId = [];
+  }
+
+  foundAdmin.UserLogId.push(log._id);
+  await foundAdmin.save();
+
+  // ✅ Response
+  res.status(201).json({
+    success: true,
+    message: `Branch "${CompanyName}" successfully created`,
+    branchId: newBranch._id,
+    branchesCreated: targetCompany.branchesCreated,
+    maxBranches: targetCompany.maxBranches,
+  });
 });
 
 module.exports = CreateBranch;

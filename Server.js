@@ -563,6 +563,8 @@ apiRoutes.use("/CreateBranch", require("./Routes/CreateBranch"));
 
 apiRoutes.use("/Notifications", require("./Routes/Notifications"));
 
+apiRoutes.use("/Seen", require("./Routes/Seen"));
+
 apiRoutes.use("/GetCompanyUsers", require("./Routes/GetCompanyUsers"));
 
 apiRoutes.use("/AddCategories", require("./Routes/AddCategories"));
@@ -571,13 +573,19 @@ apiRoutes.use("/UpdateCategories", require("./Routes/UpdateCategories"));
 
 apiRoutes.use("/DeleteCategory", require("./Routes/DeleteCategory"));
 
+apiRoutes.use("/SuperAdminSettings", require("./Routes/SuperAdminSettings"));
+
 apiRoutes.use("/GetCategories", require("./Routes/GetCategory"));
 
 apiRoutes.use("/GetTotalUsers", require("./Routes/GetAllcompanyUsers"));
 
 apiRoutes.use("/Get/Branch", require("./Routes/GetBranch"));
 
+apiRoutes.use("/Get/GetBranchUsers", require("./Routes/GetBranchUsers"));
+
 apiRoutes.use("/GetUserprofile", require("./Routes/UserProfile"));
+
+apiRoutes.use("/GetUserNotification", require("./Routes/GetUserNotification"));
 
 apiRoutes.use("/GetShops", require("./Routes/GetShops"));
 

@@ -13,7 +13,7 @@ const RegisterStaff = asyncHandler(async (req, res) => {
         targetId // No more 'type' required
     } = req.body;
     
-    console.log(Role)
+    console.log(req.body)
     const userId = req.userId;
 
     // 1. Validation

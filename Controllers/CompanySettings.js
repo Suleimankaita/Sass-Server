@@ -99,6 +99,37 @@ const UpdateSettings = asyncHandler(async (req, res) => {
     ...updateData
   } = settingsData;
   
+  console.log(branchId  , companyId)
+ const comfound =
+  (await Company.findById(companyId?.toString())) ||
+  (await Branch.findById(branchId?.toString()));
+
+if (!comfound) {
+  return res.status(400).json({ message: "Company or Branch not found" });
+}
+
+// 🔍 Check if business name already exists (excluding current record)
+const foundName =
+  (await Company.findOne({
+    CompanyName: settingsData.businessName,
+    _id: { $ne: comfound._id }
+  })) ||
+  (await Branch.findOne({
+    CompanyName: settingsData.businessName,
+    _id: { $ne: comfound._id }
+  }));
+
+if (foundName) {
+  return res.status(400).json({ message: "Business Name already exists" });
+}
+
+// ✅ Update the FOUND company/branch (not the conflicting one)
+if (settingsData?.businessName) {
+  comfound.CompanyName = settingsData.businessName;
+}
+
+await comfound.save();
+
   console.log(updateData);
 
   if (req.files?.companyLogo?.[0]) {
