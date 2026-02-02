@@ -559,6 +559,8 @@ apiRoutes.use("/Cart", require("./Routes/Cart"));
 
 apiRoutes.use("/Deals", require("./Routes/Deals"));
 
+apiRoutes.use("/WalletBalance", require("./Routes/WalletBalence"));
+
 apiRoutes.use("/CreateBranch", require("./Routes/CreateBranch"));
 
 apiRoutes.use("/Notifications", require("./Routes/Notifications"));
