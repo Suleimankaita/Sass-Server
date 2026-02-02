@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Order = require('../Models/User_order');
 const asyncHandler = require('express-async-handler');
 const User = require('../Models/User');
+const Admin = require('../Models/AdminOwner');
 const UserProfile = require('../Models/Userprofile');
 const Company = require('../Models/Company');
 const Branch = require('../Models/Branch');
@@ -11,12 +12,11 @@ function generateOrderId() {
     const rand = Math.floor(Math.random() * 1e6).toString(36);
     return `ORD-${ts}-${rand}`.toUpperCase();
 }
-
 const createOrder = asyncHandler(async (req, res) => {
     const {
         Username,
-        companyId, // Array of IDs from frontend
-        branchId,  // Array of IDs from frontend
+        companyId, 
+        branchId, 
         Customer = {},
         items = [],
         shippingCost = 0,
@@ -24,7 +24,7 @@ const createOrder = asyncHandler(async (req, res) => {
         paymentReference,
         delivery = {} 
     } = req.body;
-
+    console.log(paymentReference)
     // --- 1. Basic Validations ---
     if (!Username) return res.status(400).json({ success: false, message: 'Username is required' });
     if (!Array.isArray(items) || items.length === 0) {
@@ -34,43 +34,28 @@ const createOrder = asyncHandler(async (req, res) => {
     const user = await User.findOne({ Username }).populate('UserProfileId').exec();
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
-    // --- 2. Process Items and Link IDs ---
-    let subtotal = 0;
-    const salesToCreate = [];
-    const orderItems = [];
-    const uniqueCompanyIds = new Set();
-    const uniqueBranchIds = new Set();
+    // --- 2. Group Items by Vendor (Company + Branch) ---
+    // This is the key to privacy: Grouping items so we can create separate orders.
+    const vendorGroups = {};
 
     items.forEach((it, index) => {
-        // Safe extraction: if companyId is an array, take index. If string, take string.
         const cId = Array.isArray(companyId) ? companyId[index] : companyId;
         const bId = Array.isArray(branchId) ? branchId[index] : branchId;
+        const groupKey = `${cId}_${bId}`; // Unique key for each vendor/branch pair
 
-        // Clean up: only add to sets if the ID actually exists
-        if (cId) uniqueCompanyIds.add(cId.toString());
-        if (bId) uniqueBranchIds.add(bId.toString());
+        if (!vendorGroups[groupKey]) {
+            vendorGroups[groupKey] = {
+                companyId: cId,
+                branchId: bId,
+                items: [],
+                subtotal: 0
+            };
+        }
 
         const price = Number(it.soldAtPrice) || 0;
         const quantity = Number(it.quantity || it.qty) || 0;
-        subtotal += price * quantity;
-
-        // Prepare Sale (Specific to this item's company/branch)
-        salesToCreate.push({
-            name: it.ProductName,
-            soldAtPrice: price,
-            productType: it.productType || '',
-            Categorie: it.categoryName || it.category || '',
-            quantity,
-            TransactionType: 'Order',
-            actualPrice: it.actualPrice || 0,
-            companyId: cId || null,
-            branchId: bId || null,
-            date: new Date(),
-            paymentReference,
-        });
-
-        // Prepare Order Item
-        orderItems.push({
+        
+        vendorGroups[groupKey].items.push({
             productId: it.productId || null,
             ProductName: it.ProductName || '',
             ProductImg: Array.isArray(it.ProductImg) ? it.ProductImg : [it.ProductImg],
@@ -79,89 +64,109 @@ const createOrder = asyncHandler(async (req, res) => {
             paymentReference,
             sku: it.sku || '',
             variant: it.variant || '',
-            companyId: cId || null, // Link at item level
+            companyId: cId || null,
             branchId: bId || null
         });
+
+        vendorGroups[groupKey].subtotal += (price * quantity);
     });
 
-    // --- 3. Database Writes ---
-    const createdSales = await Sale.insertMany(salesToCreate);
-    const saleIds = createdSales.map(s => s._id);
-
-    const total = subtotal + Number(shippingCost) + Number(tax);
-
-    const createdOrder = await Order.create({
-        orderId: generateOrderId(), 
-        Username,
-        Customer,
-        // Store all unique companies/branches involved in this multi-vendor order
-        companyId: Array.from(uniqueCompanyIds), 
-        branchId: Array.from(uniqueBranchIds),
-        items: orderItems,
-        subtotal,
-        shippingCost,
-        tax,
-        total,
-        delivery: {
-            location: {
-                lat: delivery?.lat || delivery?.location?.lat || null,
-                lng: delivery?.lng || delivery?.location?.lng || null
-            }
-        }
-    });
-
-    // --- 4. Update Relationships (The Fix) ---
+    // --- 3. Create Orders & Process Commissions ---
+    const createdOrderIds = [];
     const updatePromises = [];
 
-    // User Update
+    // We loop through each vendor group to create a PRIVACY-PROTECTED order
+    for (const key in vendorGroups) {
+        const group = vendorGroups[key];
+        
+        // A. Create the Order document for THIS vendor only
+        const orderForVendor = await Order.create({
+            orderId: generateOrderId(),
+            Username,
+            Customer,
+            paymentReference,
+            companyId: [group.companyId], // Only their ID
+            branchId: [group.branchId],   // Only their ID
+            items: group.items,           // Only their items
+            subtotal: group.subtotal,
+            shippingCost: shippingCost / Object.keys(vendorGroups).length, // Split shipping
+            tax: tax / Object.keys(vendorGroups).length,                  // Split tax
+            total: group.subtotal + (shippingCost / Object.keys(vendorGroups).length),
+            delivery: {
+                location: {
+                    lat: delivery?.lat || delivery?.location?.lat || null,
+                    lng: delivery?.lng || delivery?.location?.lng || null
+                }
+            }
+        });
+
+        createdOrderIds.push(orderForVendor._id);
+
+        // B. Create Sales records for this vendor
+       const salesData = group.items.map(it => ({
+    name: it.ProductName,
+    soldAtPrice: it.Price,
+    actualPrice: it.actualPrice || 0, // 🔥 ADDED THIS: Must match your Schema requirement
+    quantity: it.quantity,
+    TransactionType: 'Order',
+    companyId: group.companyId,
+    branchId: group.branchId,
+    date: new Date(),
+    paymentReference: paymentReference || it.paymentReference
+}));
+
+// Now this will succeed because actualPrice is present
+const createdSales = await Sale.insertMany(salesData);
+        // C. Calculate 20/80 Commission
+        const commissionPool = group.subtotal; 
+        const partnerShare = commissionPool * 0.20;
+        const superAdminShare = commissionPool * 0.80;
+
+        // D. Update Wallet & Relationships
+        // 1. Give 20% to Partner Role
+        updatePromises.push(User.updateMany({ Role: "Partner" }, { $push: { walletBalance: partnerShare } }));
+        
+        // 2. Give 80% to SuperAdmin Role
+        updatePromises.push(Admin.updateMany({ Role: "SuperAdmin" }, { $push: { walletBalance: superAdminShare } }));
+
+        // 3. Link Order to Company
+        if (group.companyId && group.companyId !== "null") {
+            updatePromises.push(Company.findByIdAndUpdate(group.companyId, {
+                $push: { 
+                    Orders: orderForVendor._id, 
+                    SaleId: { $each: createdSales.map(s => s._id) } 
+                }
+            }));
+        }
+
+        // 4. Link Order to Branch
+        if (group.branchId && group.branchId !== "null") {
+            updatePromises.push(Branch.findByIdAndUpdate(group.branchId, {
+                $push: { 
+                    Orders: orderForVendor._id, 
+                    SaleId: { $each: createdSales.map(s => s._id) } 
+                }
+            }));
+        }
+    }
+
+    // --- 4. Final Updates ---
+    // Attach all sub-orders to the User's Profile
     if (user.UserProfileId) {
         updatePromises.push(UserProfile.findByIdAndUpdate(user.UserProfileId, {
-            $push: { orders: createdOrder._id }
+            $push: { orders: { $each: createdOrderIds } }
         }));
     }
 
-    // Company Updates: Only update if valid IDs exist
-    uniqueCompanyIds.forEach(id => {
-        if (!id || id === "null") return; // Skip invalid IDs
-        
-        // Find sales belonging ONLY to this specific company
-        const companySales = createdSales
-            .filter(s => s.companyId && s.companyId.toString() === id)
-            .map(s => s._id);
-
-        updatePromises.push(Company.findByIdAndUpdate(id, {
-            $push: { 
-                Orders: createdOrder._id, 
-                SaleId: { $each: companySales } 
-            }
-        }));
-    });
-
-    // Branch Updates: Only update if valid IDs exist
-    uniqueBranchIds.forEach(id => {
-        if (!id || id === "null") return;
-
-        const branchSales = createdSales
-            .filter(s => s.branchId && s.branchId.toString() === id)
-            .map(s => s._id);
-
-        updatePromises.push(Branch.findByIdAndUpdate(id, {
-            $push: { 
-                Orders: createdOrder._id, 
-                SaleId: { $each: branchSales } 
-            }
-        }));
-    });
-
     await Promise.all(updatePromises);
 
-    // --- 5. Return Populated Result ---
-    const populatedOrder = await Order.findById(createdOrder._id)
-        .populate('companyId', 'name')
-        .populate('branchId', 'name');
-
-    return res.status(201).json({ success: true, data: populatedOrder });
+    return res.status(201).json({ 
+        success: true, 
+        message: `Checkout successful. ${createdOrderIds.length} orders created for different vendors.`,
+        orderIds: createdOrderIds 
+    });
 });
+
 const getOrder = asyncHandler(async (req, res) => {
     const { id } = req.params;
     const order = await Company.findById(id).populate('companyId').populate('branchId');
@@ -220,21 +225,79 @@ const listOrders = asyncHandler(async (req, res) => {
 });
 
 const updateOrderStatus = asyncHandler(async (req, res) => {
-    const { id } = req.params;
-    const { status, paymentStatus } = req.body;
-    if (!id) return res.status(400).json({ success: false, message: 'Order ID is required' });
-    if (!status && !paymentStatus) {
-        return res.status(400).json({ success: false, message: 'At least one of status or paymentStatus must be provided' });
-    }
-    const order = await Order.findById(id);
-    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+  const { id } = req.params; // This could be the ID of ONE of the orders
+  const { status, paymentStatus } = req.body;
+
+  if (!id) return res.status(400).json({ success: false, message: "Order ID is required" });
+
+  // 1️⃣ Find the "Target" order first to get the paymentReference
+  const targetOrder = await Order.findById(id);
+  if (!targetOrder) return res.status(404).json({ success: false, message: "Order not found" });
+
+  // 2️⃣ Find ALL orders that share the same paymentReference
+  // This ensures if there are 3 vendors, we find all 3 sub-orders.
+  const relatedOrders = await Order.find({ 
+    paymentReference: targetOrder.paymentReference 
+  });
+
+  const updatePromises = [];
+
+  // 3️⃣ Loop through every related order
+  for (const order of relatedOrders) {
+    // Detect if THIS specific sub-order is transitioning to Paid
+    const isBecomingPaid = paymentStatus === "Paid" && order.paymentStatus !== "Paid";
+
+    // Update the status fields
     if (status) order.status = status;
     if (paymentStatus) order.paymentStatus = paymentStatus;
     await order.save();
-    const populated = await Order.findById(order._id).populate('companyId').populate('branchId');
-    return res.status(200).json({ success: true, data: order });
-});
 
+    // 4️⃣ Credit Wallets ONLY for the owners of THIS specific sub-order
+    if (isBecomingPaid) {
+      const amountToCredit = order.total || 0;
+
+      // Credit the Company (or companies) in this sub-order
+      if (order.companyId && order.companyId.length > 0) {
+        order.companyId.forEach(cId => {
+          if (cId && cId.toString() !== "null") {
+            updatePromises.push(
+              Company.findByIdAndUpdate(cId, {
+                $push: { walletBalance: amountToCredit }
+              })
+            );
+          }
+        });
+      }
+
+      // Credit the Branch (or branches) in this sub-order
+      if (order.branchId && order.branchId.length > 0) {
+        order.branchId.forEach(bId => {
+          if (bId && bId.toString() !== "null") {
+            updatePromises.push(
+              Branch.findByIdAndUpdate(bId, {
+                $push: { walletBalance: amountToCredit }
+              })
+            );
+          }
+        });
+      }
+    }
+  }
+
+  // Execute all wallet credits at once
+  if (updatePromises.length > 0) {
+    await Promise.all(updatePromises);
+  }
+
+  return res.status(200).json({
+    success: true,
+    message: `Processed ${relatedOrders.length} related orders.`,
+    data: {
+      updatedCount: relatedOrders.length,
+      reference: targetOrder.paymentReference
+    }
+  });
+});
 // Debug helper: create a minimal order and report DB state
 const createOrderDebug = asyncHandler(async (req, res) => {
     try {

@@ -1,5 +1,5 @@
 const express=require("express")
-const { createOrder, createOrderDebug,getOrder,listOrders,getUserOrders,getCompanyOrder,findOrder } = require("../Controllers/Order")
+const { createOrder, createOrderDebug,getOrder,listOrders,getUserOrders,getCompanyOrder,findOrder,updateOrderStatus } = require("../Controllers/Order")
 const Verify=require('../Middleware/Verify')
 
 const route=express.Router()
@@ -11,6 +11,7 @@ route.route('/Create')
 // debug route to quickly test DB write without client data
 route.get('/debug',Verify, createOrderDebug)
 route.get('/:id',Verify, getOrder)
+route.patch('/:id',Verify, updateOrderStatus )
 route.get('/Get/:id',Verify, findOrder)
 route.get('/listOrders/:id',Verify, getCompanyOrder)
 

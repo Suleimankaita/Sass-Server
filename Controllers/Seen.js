@@ -3,18 +3,18 @@ const Notification = require('../Models/NotificationsCenter');
 
 const MarkNotificationSeen = asyncHandler(async (req, res) => {
   const userId = req.userId;
-  const { id:notificationId } = req.body;
+  const { id} = req.body;
 
-  console.log(notificationId)
-  if (!userId || !notificationId) {
+  console.log(id)
+  if (!userId || !id) {
     return res.status(400).json({
       success: false,
-      message: 'UserId and NotificationId are required',
+      message: 'UserId andare required',
     });
   }
 
   const notification = await Notification.findOne({
-    _id: notificationId,
+    _id: id,
     status: 'SENT',        // ✅ Only SENT can be seen
   });
 
@@ -40,7 +40,7 @@ const MarkNotificationSeen = asyncHandler(async (req, res) => {
   res.status(200).json({
     success: true,
     message: 'Notification marked as seen',
-    notificationId: notification._id,
+    id: notification._id,
   });
 });
 

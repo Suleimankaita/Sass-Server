@@ -6,6 +6,6 @@ const Verify=require('../Middleware/Verify')
 
 
     route.route('/')
-    .post(Verify,Seen)
+    .patch(Verify,Seen)
 
     module.exports=route
