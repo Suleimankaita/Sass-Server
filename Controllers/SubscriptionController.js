@@ -7,7 +7,7 @@ const { checkSubscriptionStatus } = require('../utils/subscriptionCheck');
  */
 const PLAN_LIMITS = {
   Free: { maxBranches: 1, maxUsers: 5 },
-  Basic: { maxBranches: 1, maxUsers: 5 },
+  Basic: { maxBranches: 5, maxUsers: 10 },
   Pro: { maxBranches: 999999, maxUsers: 999999 }, // Unlimited
   Enterprise: { maxBranches: 999999, maxUsers: 999999 }, // Unlimited
 };
@@ -75,6 +75,7 @@ const subscribeCompany = asynchandler(async (req, res) => {
     const subscriptionEndDate = new Date();
     subscriptionEndDate.setMonth(subscriptionEndDate.getMonth() + parseInt(durationMonths));
 
+    console.log(subscriptionEndDate)
     // Get plan limits
     const planLimits = PLAN_LIMITS[subscriptionPlan];
 

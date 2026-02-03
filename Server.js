@@ -604,6 +604,8 @@ apiRoutes.use("/EditUserProfile", upload.single("profileImage"), require("./Rout
 
 apiRoutes.use("/api/CompanyUserAuth", require("./Routes/CompanyUsersAuth"));
 
+apiRoutes.use("/api/Subscription", require("./Routes/Subscription"));
+
 apiRoutes.use("/AllUsers", require("./Routes/AllUsers"));
 
 apiRoutes.use("/api/CompanyAuth", require("./Routes/CompanyAuth"));

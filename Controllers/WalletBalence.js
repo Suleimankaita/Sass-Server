@@ -5,8 +5,8 @@ const asyncHandler = require('express-async-handler');
 const GetBalance = asyncHandler(async (req, res) => {
     const id = req.userId;
     const { companyId } = req.query;
-    const role = req.userType;
-
+    const role = req.role;
+    console.log(role)
     // 1. Validation
     if (!id || !companyId) {
         return res.status(400).json({ message: 'UserId and CompanyId are required' });

@@ -264,20 +264,24 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
               Company.findByIdAndUpdate(cId, {
                 $push: { walletBalance: amountToCredit }
               })
+            )||updatePromises.push(
+              Branch.findByIdAndUpdate(bId, {
+                $push: { walletBalance: amountToCredit }
+              })
             );
           }
         });
       }
 
       // Credit the Branch (or branches) in this sub-order
-      if (order.branchId && order.branchId.length > 0) {
-        order.branchId.forEach(bId => {
+      if (order.companyId && order.companyId.length > 0) {
+        order.companyId.forEach(bId => {
           if (bId && bId.toString() !== "null") {
-            updatePromises.push(
-              Branch.findByIdAndUpdate(bId, {
-                $push: { walletBalance: amountToCredit }
-              })
-            );
+            // updatePromises.push(
+            //   Branch.findByIdAndUpdate(bId, {
+            //     $push: { walletBalance: amountToCredit }
+            //   })
+            // );
           }
         });
       }

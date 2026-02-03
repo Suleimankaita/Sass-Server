@@ -59,6 +59,7 @@ const Verify = asynchandler(async (req, res, next) => {
         // We attach the whole object (excluding password) for use in later routes
         req.user = foundAccount;
         req.userId = id;
+        req.role = user?.Role|| companyUser?.Role ||admin?.Role;
         req.username = Username;
         req.userType = admin ? 'Admin' : (companyUser ? 'CompanyUser' : 'User');
 
