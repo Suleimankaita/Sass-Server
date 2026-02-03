@@ -1,5 +1,6 @@
 const asynchandler = require('express-async-handler');
 const Company = require('../Models/Company');
+const Billing=require('../Models/Billing')
 const { checkSubscriptionStatus } = require('../utils/subscriptionCheck');
 
 /**
@@ -19,15 +20,23 @@ const getSubscriptionStatus = asynchandler(async (req, res) => {
   try {
     const { companyId } = req.params;
 
+    // 1. Find the Company
     const company = await Company.findById(companyId);
     if (!company) {
       return res.status(404).json({ message: 'Company not found' });
     }
 
+    // 2. Find ALL billing records instead of just one
+    // We sort by createdAt: -1 to get the latest transactions first
+    const billingHistory = await Billing.find({ companyId })
+      .sort({ createdAt: -1 }) 
+      .exec();
+
     const status = checkSubscriptionStatus(company);
     
     return res.status(200).json({
       subscriptionStatus: status,
+      billing: billingHistory, // This is now an array of all transactions
       company: {
         _id: company._id,
         CompanyName: company.CompanyName,
@@ -52,8 +61,8 @@ const getSubscriptionStatus = asynchandler(async (req, res) => {
 const subscribeCompany = asynchandler(async (req, res) => {
   try {
     const { companyId } = req.params;
-    const { subscriptionPlan, durationMonths, paymentDetails } = req.body;
-
+    const { subscriptionPlan, durationMonths, paymentDetails,amount,refrence,status } = req.body;
+    console.log(amount ,refrence ,status)
     if (!subscriptionPlan || !durationMonths) {
       return res.status(400).json({
         message: 'subscriptionPlan and durationMonths are required'
@@ -88,6 +97,14 @@ const subscribeCompany = asynchandler(async (req, res) => {
     company.maxUsers = planLimits.maxUsers;
 
     await company.save();
+
+    await Billing.create({
+      companyId,
+      amount,
+    reference:refrence,
+    status,
+    planName:subscriptionPlan
+    })
 
     return res.status(200).json({
       message: 'Subscription activated successfully',

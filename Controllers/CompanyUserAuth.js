@@ -20,7 +20,9 @@ const CompanyAuth = asynchandler(async (req, res) => {
       .exec();
 
     if (!found) return res.status(401).json({ message: 'User not found' });
+
     if (found.Password !== Password) return res.status(401).json({ message: 'Incorrect Password' });
+    
     if (!found.Active) return res.status(403).json({ message: "Account suspended." });
 
     // 2. Find Company or Branch (The "Parent")

@@ -48,40 +48,40 @@ const HistorySchema = new mongoose.Schema({
 const FoodItemSchema = new mongoose.Schema({
     name: {
         type: String,
-        required: true,
+        // required: true,
         trim: true
     },
     category: {
         type: String,
-        required: true,
+        // required: true,
         trim: true
     },
     imageUrl: {
         type: String,
-        required: true,
+        // required: true,
         trim: true
     },
     oldPrice: {
         type: Number,
-        required: true
+        // required: true
     },
     newPrice: {
         type: Number,
-        required: true
+        // required: true
     },
     change: {
         type: String,
         enum: ['UP', 'DOWN', 'STABLE'],
-        required: true
+        // required: true
     },
     volatility: {
         type: String,
         enum: ['VERY_LOW', 'LOW', 'MEDIUM', 'HIGH', 'VERY_HIGH'],
-        required: true
+        // required: true
     },
     description: {
         type: String,
-        required: true
+        // required: true
     },
     history: {
         type: [HistorySchema],

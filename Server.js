@@ -551,7 +551,7 @@ apiRoutes.use("/Auth/CompanyRegs",
 
 );
 
-apiRoutes.use("/food/", upload.single('file'), require("./Routes/FoodPrice"));
+apiRoutes.use("/food/", upload.single('image'), require("./Routes/FoodPrice"));
 
 apiRoutes.use("/CompanyUsersRegs", require("./Routes/CompanyUsersRegs"));
 

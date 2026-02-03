@@ -38,6 +38,7 @@ function computeEffectivePrice(doc) {
 const createPrice = asynchandler(async (req, res) => {
   const body = req.body;
   console.log(req.file);
+  console.log(req.body);
   if (!body.name || body.basePrice == null) return res.status(400).json({ message: 'name and basePrice required' });
 
   if (body.companyId && !mongoose.Types.ObjectId.isValid(body.companyId)) {
