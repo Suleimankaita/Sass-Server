@@ -2,51 +2,133 @@ const asynchandler = require('express-async-handler');
 const mongoose = require('mongoose');
 const FoodPrice = require('../Models/FoodPrice');
 // Compute effective price applying discount, seasonal adjustment and tax
-function computeEffectivePrice(doc) {
-  if (!doc) return null;
+const computeEffectivePrice = (doc) => {
+  if (!doc) return 0;
   let price = Number(doc.basePrice || 0);
 
-  // apply discount
-  if (doc.discount && doc.discount.type && doc.discount.type !== 'none') {
-    if (doc.discount.type === 'percent') {
-      price = price * (1 - (Number(doc.discount.value || 0) / 100));
-    } else if (doc.discount.type === 'fixed') {
-      price = Math.max(0, price - Number(doc.discount.value || 0));
-    }
+  // 1. Discount
+  if (doc.discount?.type === 'percent') {
+    price *= (1 - (Number(doc.discount.value || 0) / 100));
+  } else if (doc.discount?.type === 'fixed') {
+    price = Math.max(0, price - Number(doc.discount.value || 0));
   }
 
-  // seasonal adjustment (percent), only if within window
-  if (doc.seasonal && doc.seasonal.percent) {
+  // 2. Seasonal (if within dates)
+  if (doc.seasonal?.percent) {
     const now = new Date();
-    const s = doc.seasonal.startsAt ? new Date(doc.seasonal.startsAt) : null;
-    const e = doc.seasonal.endsAt ? new Date(doc.seasonal.endsAt) : null;
-    const active = (!s || now >= s) && (!e || now <= e);
-    if (active) {
-      price = price * (1 + Number(doc.seasonal.percent) / 100);
+    const start = doc.seasonal.startsAt ? new Date(doc.seasonal.startsAt) : null;
+    const end = doc.seasonal.endsAt ? new Date(doc.seasonal.endsAt) : null;
+    if ((!start || now >= start) && (!end || now <= end)) {
+      price *= (1 + Number(doc.seasonal.percent) / 100);
     }
   }
 
-  // apply tax
+  // 3. Tax
   if (doc.taxRate) {
-    price = price * (1 + Number(doc.taxRate || 0) / 100);
+    price *= (1 + Number(doc.taxRate) / 100);
   }
 
   return Number(price.toFixed(2));
-}
+};
 
-// Create price
+// --- CREATE ---
 const createPrice = asynchandler(async (req, res) => {
-  const body = req.body;
-  console.log(req.file);
-  console.log(req.body);
-  if (!body.name || body.basePrice == null) return res.status(400).json({ message: 'name and basePrice required' });
+  const { name, category, basePrice, description, volatility, discount, seasonal, taxRate } = req.body;
 
-  if (body.companyId && !mongoose.Types.ObjectId.isValid(body.companyId)) {
-    return res.status(400).json({ message: 'invalid companyId' });
-  }
+  // Calculate the initial effective price
+  const tempDoc = { basePrice, discount, seasonal, taxRate };
+  const calculatedPrice = computeEffectivePrice(tempDoc);
 
-  const created = await FoodPrice.create(body);
-  return res.status(201).json({ success: true, price: created });
+  const priceData = {
+    name,
+    category,
+    description,
+    volatility: volatility || 'MEDIUM',
+    basePrice: Number(basePrice),
+    taxRate: Number(taxRate || 0),
+    currentPrice: calculatedPrice, // This is "newPrice" for frontend
+    previousPrice: calculatedPrice, // Initial state
+    imageUrl: req.file ? req.file.filename : undefined,
+    discount: {
+      type: discount?.type || 'none',
+      value: Number(discount?.value || 0)
+    },
+    seasonal: {
+      percent: Number(seasonal?.percent || 0),
+      startsAt: seasonal?.startsAt,
+      endsAt: seasonal?.endsAt
+    },
+    // Initialize history with the first data point
+    history: [{ price: calculatedPrice, date: new Date() }]
+  };
+
+  const created = await FoodPrice.create(priceData);
+  res.status(201).json({ success: true, data: created });
+});
+
+// --- LIST (Mapped for Frontend) ---
+const listPrices = asynchandler(async (req, res) => {
+  const docs = await FoodPrice.find({ active: { $ne: false } }).exec();
+
+  // Map DB fields to the exact keys your React Frontend expects
+  const formattedData = docs.map(d => ({
+    id: d._id,
+    name: d.name,
+    category: d.category,
+    imageUrl: d.imageUrl,
+    oldPrice: d.previousPrice, // Mapped
+    newPrice: d.currentPrice,  // Mapped
+    change: d.change,          // Calculated by Schema Pre-save
+    volatility: d.volatility,
+    description: d.description,
+    history: d.history         // Array for Chart.js
+  }));
+
+  return res.status(200).json({ success: true, data: formattedData });
+});
+
+// --- UPDATE ---
+const updatePrice = asynchandler(async (req, res) => {
+  const id = req.params.id;
+  const existingDoc = await FoodPrice.findById(id);
+
+  if (!existingDoc) return res.status(404).json({ message: 'Not found' });
+
+  // 1. Reconstruct flat FormData into structured objects
+  const updateData = {
+    name: req.body.name,
+    category: req.body.category,
+    basePrice: Number(req.body.basePrice),
+    taxRate: Number(req.body.taxRate || 0),
+    discount: {
+      type: req.body['discount[type]'] || 'none',
+      value: Number(req.body['discount[value]'] || 0)
+    },
+    seasonal: {
+      percent: Number(req.body['seasonal[percent]'] || 0),
+      startsAt: req.body['seasonal[startsAt]'] || null,
+      endsAt: req.body['seasonal[endsAt]'] || null
+    }
+  };
+
+  if (req.file) updateData.imageUrl = req.file.filename;
+
+  // 2. Compute the new price
+  // Ensure computeEffectivePrice uses Numbers, not objects
+  updateData.previousPrice = existingDoc.currentPrice;
+  updateData.currentPrice = computeEffectivePrice(updateData); 
+
+  // 3. Update with $set and $push
+  const updated = await FoodPrice.findByIdAndUpdate(
+    id,
+    { 
+      $set: updateData,
+      $push: { history: { price: updateData.currentPrice, date: new Date() } }
+    },
+    { new: true, runValidators: true }
+  ).exec();
+
+  res.status(200).json({ success: true, data: updated });
 });
 
 // Get single price
@@ -62,49 +144,89 @@ const getPrice = asynchandler(async (req, res) => {
 });
 
 // List prices (optional companyId filter)
-const listPrices = asynchandler(async (req, res) => {
-  const filter = {};
-  if (req.query.companyId) {
-    if (!mongoose.Types.ObjectId.isValid(req.query.companyId)) return res.status(400).json({ message: 'invalid companyId' });
-    filter.companyId = req.query.companyId;
-  }
-  if (req.query.active) filter.active = String(req.query.active) === 'true';
 
-  const docs = await FoodPrice.find(filter).limit(1000).exec();
-  const payload = docs.map(d => ({
-    price: d,
-    effectivePrice: computeEffectivePrice(d),
-  }));
-  return res.status(200).json({ success: true, data: payload });
-});
 
 // Update price
-const updatePrice = asynchandler(async (req, res) => {
-  const id = req.params.id || req.body.id;
-  if (!id) return res.status(400).json({ message: 'id is required' });
-  if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: 'invalid id' });
+// const updatePrice = asynchandler(async (req, res) => {
+//   const id = req.params.id || req.body.id;
+  
+//   if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+//     return res.status(400).json({ message: 'A valid ID is required' });
+//   }
 
-  // prevent clients from setting computed fields
-  const up = { ...req.body };
-  delete up._id;
+//   // 1. Prepare the update object
+//   // Note: FormData sends nested objects as strings like "discount[type]"
+//   // Depending on your middleware, you may need to parse them manually:
+//   const updateData = {
+//     ...req.body,
+//     // Ensure numbers are actually numbers
+//     basePrice: req.body.basePrice ? Number(req.body.basePrice) : undefined,
+//     taxRate: req.body.taxRate ? Number(req.body.taxRate) : undefined,
+//   };
 
-  const updated = await FoodPrice.findByIdAndUpdate(id, up, { new: true }).exec();
-  if (!updated) return res.status(404).json({ message: 'not found' });
-  return res.status(200).json({ success: true, price: updated, effectivePrice: computeEffectivePrice(updated) });
+//   // 2. Fix the Image bug
+//   if (req.file) {
+//     // Correct way to add the filename/path
+//     updateData.image = req.file.filename; 
+//   }
+
+//   // 3. Reconstruct nested objects if they were sent as flat keys
+//   if (req.body.discount) {
+//     updateData.discount = {
+//       type: req.body.discount.type || 'none',
+//       value: Number(req.body.discount.value || 0)
+//     };
+//   }
+  
+//   if (req.body.seasonal) {
+//     updateData.seasonal = {
+//       percent: Number(req.body.seasonal.percent || 0),
+//       startsAt: req.body.seasonal.startsAt,
+//       endsAt: req.body.seasonal.endsAt
+//     };
+//   }
+
+//   // Prevent ID overwriting
+//   delete updateData._id;
+
+//   // 4. Update the Database
+//   const updated = await FoodPrice.findByIdAndUpdate(
+//     id, 
+//     { $set: updateData }, 
+//     { new: true, runValidators: true }
+//   ).exec();
+
+//   if (!updated) {
+//     return res.status(404).json({ message: 'Food item not found' });
+//   }
+
+//   // 5. Return the updated item + computed price
+//   return res.status(200).json({ 
+//     success: true, 
+//     price: updated, 
+//     effectivePrice: computeEffectivePrice(updated) 
+//   });
+// });
+
+const deletePrice = asynchandler(async (req, res) => {
+  const id = req.params.id;
+  const doc = await FoodPrice.findByIdAndUpdate(id, { active: false }, { new: true });
+  if (!doc) return res.status(404).json({ message: 'Item not found' });
+  return res.status(200).json({ success: true, message: 'Item deactivated' });
 });
 
 // Delete (soft) price
-const deletePrice = asynchandler(async (req, res) => {
-  const id = req.params.id || req.body.id;
-  if (!id) return res.status(400).json({ message: 'id is required' });
-  if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: 'invalid id' });
+// const deletePrice = asynchandler(async (req, res) => {
+//   const id = req.params.id || req.body.id;
+//   if (!id) return res.status(400).json({ message: 'id is required' });
+//   if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: 'invalid id' });
 
-  const doc = await FoodPrice.findById(id).exec();
-  if (!doc) return res.status(404).json({ message: 'not found' });
-  doc.active = false;
-  await doc.save();
-  return res.status(200).json({ success: true });
-});
+//   const doc = await FoodPrice.findById(id).exec();
+//   if (!doc) return res.status(404).json({ message: 'not found' });
+//   doc.active = false;
+//   await doc.save();
+//   return res.status(200).json({ success: true });
+// });
 
 // Bulk update: accepts array of {id, fields}
 const bulkUpdate = asynchandler(async (req, res) => {
