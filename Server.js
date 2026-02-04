@@ -199,6 +199,16 @@ socketController(io);
 io.on("connection", (socket) => {
   // connected to worker
   // setInterval(() => {
+
+    socket.on("join_identity_room", (id) => {
+    socket.join(id.toString());
+    console.log(`Socket ${socket.id} joined room: ${id}`);
+  });
+
+  // Optional: Specific room for SuperAdmins
+  socket.on("join_admin_pool", () => {
+    socket.join("super_admins");
+  });
     socket.on('loc',(coords)=>{
       console.log(coords)
     })

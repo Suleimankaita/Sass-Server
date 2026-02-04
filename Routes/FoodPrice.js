@@ -10,7 +10,7 @@ router.post('/', Verify,PriceController.createPrice);
 router.get('/:id', Verify,PriceController.getPrice);
 
 // List prices (optional query: companyId, active)
-router.get('/', Verify,PriceController.listPrices);
+router.get('/',PriceController.listPrices);
 
 // Update price (protected)
 router.put('/:id', Verify, PriceController.updatePrice);

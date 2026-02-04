@@ -191,6 +191,7 @@ const getUserOrders = asyncHandler(async (req, res) => {
 
     const finalOrders = UsesOrders.UserProfileId.orders.map(res=>{
         return {
+            id:res?._id,
             item:res?.items,
             status:res?.status,
             total:res?.total,
