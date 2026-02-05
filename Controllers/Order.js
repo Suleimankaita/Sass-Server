@@ -7,11 +7,66 @@ const UserProfile = require('../Models/Userprofile');
 const Company = require('../Models/Company');
 const Branch = require('../Models/Branch');
 const Sale=require('../Models/SaleShema');
+const nodemailer = require('nodemailer');
 function generateOrderId() {
     const ts = Date.now().toString(36);
     const rand = Math.floor(Math.random() * 1e6).toString(36);
     return `ORD-${ts}-${rand}`.toUpperCase();
 }
+
+// --- 1. Email Design Wrapper ---
+
+
+// --- 2. Main Controller ---
+
+// --- 1. Beautiful Email UI Wrapper ---
+// This handles the layout, logo, and centering for all emails
+const emailWrapper = (content, title) => `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { margin: 0; padding: 0; background-color: #f1f5f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .wrapper { width: 100%; table-layout: fixed; background-color: #f1f5f9; padding-bottom: 40px; }
+        .main-table { background-color: #ffffff; margin: 0 auto; width: 100%; max-width: 600px; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .header { background-color: #1e293b; padding: 30px 20px; text-align: center; }
+        .logo { width: 150px; height: auto; display: block; margin: 0 auto; }
+        .content { padding: 40px 30px; color: #334155; line-height: 1.6; }
+        .h1 { font-size: 22px; font-weight: 700; color: #0f172a; margin: 0 0 20px; text-align: center; }
+        .highlight-box { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 25px 0; text-align: center; }
+        .amount { font-size: 24px; font-weight: 800; color: #4f46e5; margin: 10px 0 0; display: block; }
+        .label { font-size: 13px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+        .footer { background-color: #f1f5f9; padding: 20px; text-align: center; color: #94a3b8; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <table class="main-table" cellspacing="0" cellpadding="0">
+            <tr>
+                <td class="header">
+                     <img src="cid:ysstorelogo" alt="YSStore" class="logo" />
+                </td>
+            </tr>
+            <tr>
+                <td class="content">
+                    <h1 class="h1">${title}</h1>
+                    ${content}
+                </td>
+            </tr>
+            <tr>
+                <td class="footer">
+                    <p>&copy; 2026 YSStore Logistics. All rights reserved.</p>
+                </td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>
+`;
+
+// --- 2. The Full Controller ---
 const createOrder = asyncHandler(async (req, res) => {
     const {
         Username,
@@ -22,9 +77,12 @@ const createOrder = asyncHandler(async (req, res) => {
         shippingCost = 0,
         tax = 0,
         paymentReference,
+        subtotal,
         delivery = {} 
     } = req.body;
-    console.log(paymentReference)
+
+    console.log("Processing Order Ref:", paymentReference);
+    
     // --- 1. Basic Validations ---
     if (!Username) return res.status(400).json({ success: false, message: 'Username is required' });
     if (!Array.isArray(items) || items.length === 0) {
@@ -34,14 +92,12 @@ const createOrder = asyncHandler(async (req, res) => {
     const user = await User.findOne({ Username }).populate('UserProfileId').exec();
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
-    // --- 2. Group Items by Vendor (Company + Branch) ---
-    // This is the key to privacy: Grouping items so we can create separate orders.
+    // --- 2. Group Items by Vendor ---
     const vendorGroups = {};
-
     items.forEach((it, index) => {
         const cId = Array.isArray(companyId) ? companyId[index] : companyId;
         const bId = Array.isArray(branchId) ? branchId[index] : branchId;
-        const groupKey = `${cId}_${bId}`; // Unique key for each vendor/branch pair
+        const groupKey = `${cId}_${bId}`;
 
         if (!vendorGroups[groupKey]) {
             vendorGroups[groupKey] = {
@@ -74,24 +130,30 @@ const createOrder = asyncHandler(async (req, res) => {
     // --- 3. Create Orders & Process Commissions ---
     const createdOrderIds = [];
     const updatePromises = [];
+    let totalAdminCommission = 0;
+    let totalPartnerCommission = 0;
 
-    // We loop through each vendor group to create a PRIVACY-PROTECTED order
+    const numberOfVendors = Object.keys(vendorGroups).length;
+
     for (const key in vendorGroups) {
         const group = vendorGroups[key];
         
-        // A. Create the Order document for THIS vendor only
+        // Calculate split tax for this specific vendor
+        const groupTax = tax / numberOfVendors;
+        const groupShipping = shippingCost / numberOfVendors;
+
         const orderForVendor = await Order.create({
             orderId: generateOrderId(),
             Username,
             Customer,
             paymentReference,
-            companyId: [group.companyId], // Only their ID
-            branchId: [group.branchId],   // Only their ID
-            items: group.items,           // Only their items
+            companyId: [group.companyId],
+            branchId: [group.branchId],
+            items: group.items,
             subtotal: group.subtotal,
-            shippingCost: shippingCost / Object.keys(vendorGroups).length, // Split shipping
-            tax: tax / Object.keys(vendorGroups).length,                  // Split tax
-            total: group.subtotal + (shippingCost / Object.keys(vendorGroups).length),
+            shippingCost: groupShipping,
+            tax: groupTax,
+            total: group.subtotal + groupShipping + groupTax,
             delivery: {
                 location: {
                     lat: delivery?.lat || delivery?.location?.lat || null,
@@ -102,34 +164,35 @@ const createOrder = asyncHandler(async (req, res) => {
 
         createdOrderIds.push(orderForVendor._id);
 
-        // B. Create Sales records for this vendor
-       const salesData = group.items.map(it => ({
-    name: it.ProductName,
-    soldAtPrice: it.Price,
-    actualPrice: it.actualPrice || 0, // 🔥 ADDED THIS: Must match your Schema requirement
-    quantity: it.quantity,
-    TransactionType: 'Order',
-    companyId: group.companyId,
-    branchId: group.branchId,
-    date: new Date(),
-    paymentReference: paymentReference || it.paymentReference
-}));
+        const salesData = group.items.map(it => ({
+            name: it.ProductName,
+            soldAtPrice: it.Price,
+            actualPrice: it.actualPrice || 0,
+            quantity: it.quantity,
+            TransactionType: 'Order',
+            companyId: group.companyId,
+            branchId: group.branchId,
+            date: new Date(),
+            paymentReference: paymentReference || it.paymentReference
+        }));
 
-// Now this will succeed because actualPrice is present
-const createdSales = await Sale.insertMany(salesData);
-        // C. Calculate 20/80 Commission
-        const commissionPool = group.subtotal; 
-        const partnerShare = commissionPool * 0.20;
-        const superAdminShare = commissionPool * 0.80;
+        const createdSales = await Sale.insertMany(salesData);
 
-        // D. Update Wallet & Relationships
-        // 1. Give 20% to Partner Role
-        updatePromises.push(User.updateMany({ Role: "Partner" }, { $push: { walletBalance: partnerShare } }));
+        // --- UPDATED COMMISSION LOGIC ---
+        // 20% of Tax to Partner, 80% of Tax to Admin
+        // We add tax to the subtotal to create the "Commission Pool"
+        const commissionPool = group.subtotal + groupTax; 
         
-        // 2. Give 80% to SuperAdmin Role
+        const partnerShare = tax * 0.20;
+        const superAdminShare = tax * 0.80;
+        
+        totalAdminCommission += superAdminShare;
+        totalPartnerCommission += partnerShare;
+
+        // Update Wallets
+        updatePromises.push(User.updateMany({ Role: "Partner" }, { $push: { walletBalance: partnerShare } }));
         updatePromises.push(Admin.updateMany({ Role: "SuperAdmin" }, { $push: { walletBalance: superAdminShare } }));
 
-        // 3. Link Order to Company
         if (group.companyId && group.companyId !== "null") {
             updatePromises.push(Company.findByIdAndUpdate(group.companyId, {
                 $push: { 
@@ -139,7 +202,6 @@ const createdSales = await Sale.insertMany(salesData);
             }));
         }
 
-        // 4. Link Order to Branch
         if (group.branchId && group.branchId !== "null") {
             updatePromises.push(Branch.findByIdAndUpdate(group.branchId, {
                 $push: { 
@@ -150,8 +212,6 @@ const createdSales = await Sale.insertMany(salesData);
         }
     }
 
-    // --- 4. Final Updates ---
-    // Attach all sub-orders to the User's Profile
     if (user.UserProfileId) {
         updatePromises.push(UserProfile.findByIdAndUpdate(user.UserProfileId, {
             $push: { orders: { $each: createdOrderIds } }
@@ -160,13 +220,88 @@ const createdSales = await Sale.insertMany(salesData);
 
     await Promise.all(updatePromises);
 
+    // --- 4. Nodemailer Implementation ---
+    const transporter = nodemailer.createTransport({
+        service: 'gmail', 
+        auth: { user: "suleiman20015kaita@gmail.com", pass: "wwwh pvxz cqvl htjm" }
+    });
+
+    const sendYSStoreMail = async (to, subject, htmlContent) => {
+        try {
+            await transporter.sendMail({
+                from: '"YSStore Logistics" <noreply@ysstore.com>',
+                to,
+                subject,
+                html: emailWrapper(htmlContent, subject),
+                attachments: [{
+                    filename: 'YSStore.png',
+                    path: 'http://localhost:3500/img/YSStore.png', // Ensure this is a valid local path or URL
+                    cid: 'ysstorelogo'
+                }]
+            });
+        } catch (err) {
+            console.error("Mail Delivery Error:", err);
+        }
+    };
+
+    // Calculate Final Total Displayed to Customer
+    // Since totalAdminCommission and totalPartnerCommission ALREADY include the tax,
+    // we only need to add shippingCost. Do NOT add 'tax' again here or it will be double counted.
+    const totalOrderAmount = totalAdminCommission + totalPartnerCommission + shippingCost;
+
+    // 1. To Customer
+    await sendYSStoreMail(user.UserProfileId?.Email || Customer.email, "Your Order is Confirmed!", `
+        <p>Hello <strong>${Username}</strong>,</p>
+        <p>Your order has been placed successfully. Thank you for choosing YSStore.</p>
+        <div class="highlight-box">
+            <div class="label">Order Reference</div>
+            <div style="font-size: 16px; font-weight: bold; margin-bottom: 15px;">${paymentReference}</div>
+            
+            <div class="label">Total Paid</div>
+            <span class="amount">₦${subtotal.toLocaleString()}</span>
+        </div>
+        <p style="text-align: center;">We are currently processing your items and will notify you once they are on their way.</p>
+    `);
+
+    // 2. To Partners
+    const partnerUsers = await Admin.find({ Role: "Partner" }).populate("UserProfileId");
+    const partnerEmails = partnerUsers.map(res => res.UserProfileId?.Email).filter(e => e); // Filter out nulls
+    
+    if (partnerEmails.length > 0) {
+        await sendYSStoreMail(partnerEmails, "New Commission Earned!", `
+            <p style="text-align:center;">A new checkout has been completed on the platform.</p>
+            <div class="highlight-box">
+                <div class="label">Your Earnings (20%)</div>
+                <span class="amount">₦${totalPartnerCommission.toLocaleString()}</span>
+                <p style="margin:10px 0 0 0; font-size:12px; color:#64748b;">Includes 20% of Order Tax</p>
+                <p style="margin:5px 0 0 0; font-size:12px; color:#64748b;">Ref: ${paymentReference}</p>
+            </div>
+            <p style="text-align:center;">Your wallet has been credited successfully.</p>
+        `);
+    }
+
+    // 3. To SuperAdmins
+    const adminUsers = await Admin.find({ Role: "SuperAdmin" }).populate("UserProfileId");
+    const adminEmails = adminUsers.map(res => res.UserProfileId?.Email).filter(e => e);
+    
+    if (adminEmails.length > 0) {
+        await sendYSStoreMail(adminEmails.join(','), "Revenue Alert: New Order", `
+            <p style="text-align:center;">Transaction successful. The system revenue has been updated.</p>
+            <div class="highlight-box">
+                <div class="label">Admin Share (80%)</div>
+                <span class="amount">₦${totalAdminCommission.toLocaleString()}</span>
+                <p style="margin:10px 0 0 0; font-size:12px; color:#64748b;">Customer: ${Username}</p>
+                <p style="margin:5px 0 0 0; font-size:12px; color:#64748b;">Ref: ${paymentReference}</p>
+            </div>
+        `);
+    }
+
     return res.status(201).json({ 
         success: true, 
         message: `Checkout successful. ${createdOrderIds.length} orders created for different vendors.`,
         orderIds: createdOrderIds 
     });
 });
-
 const getOrder = asyncHandler(async (req, res) => {
     const { id } = req.params;
     const order = await Company.findById(id).populate('companyId').populate('branchId');

@@ -88,7 +88,7 @@ const CreateBranch = asyncHandler(async (req, res) => {
   await Settings.create({
     businessName: CompanyName,
     address: street,
-    companyId: newBranch._id,
+    branchId: newBranch._id,
   });
 
   // 8️⃣ Link Branch to Company
