@@ -2,31 +2,56 @@ const axios = require('axios');
 const asynchandler = require('express-async-handler');
 const Company = require('../Models/Company');
 const Branch = require('../Models/Branch');
+const Admin = require('../Models/AdminOwner');
+const CompanyUsers = require('../Models/CompanyUsers');
 
-// Note: Always use process.env for keys in production!
-const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_KEY 
+const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_KEY;
 
 const transferToBank = asynchandler(async (req, res) => {
     const userid = req.userId;
-    const { name, code, account_number, amount, companyId } = req.body;
-  console.log(companyId)
+    // Added 'otp' to the destructured body
+    const { name, code, account_number, amount, companyId, otp } = req.body;
+
     // 1. Validation
-    if (!userid) return res.status(400).json({ 'message': 'userId is required' });
-    if (!name || !code || !account_number || !amount || !companyId) {
-        return res.status(400).json({ message: "Missing required transfer data." });
+    if (!userid) return res.status(400).json({ message: 'userId is required' });
+    if (!name || !code || !account_number || !amount || !companyId || !otp) {
+        return res.status(400).json({ message: "Missing required transfer data or OTP." });
     }
 
-    // 2. Find Company or Branch
-    const foundcom = await Company.findById(companyId) || await Branch.findById(companyId);
-    if (!foundcom) return res.status(404).json({ 'message': 'Company or Branch not found' });
+    // 2. Find User and Validate Role
+    const checkRoles = ['Admin', 'manager', 'Partner'];
+    const userFound = await Admin.findById(userid) || await CompanyUsers.findById(userid);
+    
+    if (!userFound || !checkRoles.includes(userFound.Role)) {
+        return res.status(401).json({ message: "Unauthorized: Insufficient permissions." });
+    }
 
-    // 3. Balance Check
-    // We sum the array [0, 1500] to get total available funds
+    // --- 3. OTP VERIFICATION BLOCK ---
+    // Assuming your model stores 'otp' and 'otpExpires'
+    if (userFound.otp !== otp) {
+        return res.status(400).json({ message: "Invalid OTP code." });
+    }
+
+    if (userFound.otpExpires < Date.now()) {
+        return res.status(400).json({ message: "OTP has expired. Please request a new one." });
+    }
+
+    // Clear OTP after successful verification to prevent replay attacks
+    userFound.otp = null;
+    userFound.otpExpires = null;
+    await userFound.save();
+    // ---------------------------------
+
+    // 4. Find Company or Branch
+    const foundcom = await Company.findById(companyId) || await Branch.findById(companyId);
+    if (!foundcom) return res.status(404).json({ message: 'Company or Branch not found' });
+
+    // 5. Balance Check
     const currentBalance = foundcom.walletBalance.reduce((prv, sum) => prv + sum, 0);
     const transferAmount = Number(amount);
 
     if (currentBalance < transferAmount) {
-        return res.status(403).json({ 'message': 'Insufficient balance' });
+        return res.status(403).json({ message: 'Insufficient balance' });
     }
 
     try {
@@ -68,8 +93,6 @@ const transferToBank = asynchandler(async (req, res) => {
         );
 
         // Step 3 — Deduct from Local Database
-        // We assume the first index or a specific logic for your walletBalance array. 
-        // Here, we update the balance by subtracting the amount.
         foundcom.walletBalance[foundcom.walletBalance.length - 1] -= transferAmount;
         await foundcom.save();
 

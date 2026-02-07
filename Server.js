@@ -122,6 +122,7 @@ const allowedOrigins = [
      'http://localhost:5173',
   "http://172.20.10.6:3500",
      'http://172.20.10.2:5173',
+     'http://172.20.10.3:5173',
   'http://127.0.0.1:5173',
   "https://172.20.10.2:5173/",
   'https://your-production-domain.com'
@@ -572,6 +573,8 @@ apiRoutes.use("/Deals", require("./Routes/Deals"));
 apiRoutes.use("/WalletBalance", require("./Routes/WalletBalence"));
 
 apiRoutes.use("/CreateBranch", require("./Routes/CreateBranch"));
+
+apiRoutes.use("/Otp", require("./Routes/PayoutOtp"));
 
 apiRoutes.use("/Notifications", require("./Routes/Notifications"));
 

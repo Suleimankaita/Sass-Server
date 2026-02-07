@@ -49,6 +49,7 @@ const GetBalance = asyncHandler(async (req, res) => {
             count: pendingProcessingOrders.length,
             totalAmount: totalPendingAmount
         },
+        transaction:orders,
          Balance
         
     });

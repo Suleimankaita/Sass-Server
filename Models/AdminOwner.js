@@ -54,7 +54,14 @@ const AdminSchema = new mongoose.Schema(
     },  
     WalletNumber: Number,
     walletBalance: { type: [Number], default: 0 },
-
+otp: { 
+      type: String, 
+      default: null 
+    },
+    otpExpires: { 
+      type: Date, 
+      default: null 
+    },
     UserLogId: [{ type: mongoose.Schema.Types.ObjectId, ref: "UserLog" }],
     // EcomerceProducts: [{ type: mongoose.Schema.Types.ObjectId, ref: "EcomerceProducts" }],
     // POSProductsId: [{ type: mongoose.Schema.Types.ObjectId, ref: "POSProducts" }],

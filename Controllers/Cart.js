@@ -102,20 +102,20 @@ status: 'claimed'
 
 
 // Extract product IDs
-const productIds = cart.map(item => item.productId);
+    const productIds = cart.map(item => item.productId);
 
 
-// Fetch all products at once
-const products = await EcomerceProducts.find({
-_id: { $in: productIds }
-}).lean();
+    // Fetch all products at once
+    const products = await EcomerceProducts.find({
+    _id: { $in: productIds }
+    }).lean();
 
 
-// Merge cart + product data
-const mergedCart = cart.map(cartItem => {
-const product = products.find(
-p => p._id.toString() === cartItem.productId.toString()
-);
+    // Merge cart + product data
+    const mergedCart = cart.map(cartItem => {
+    const product = products.find(
+    p => p._id.toString() === cartItem.productId.toString()
+    );
 
 
 return {

@@ -10,6 +10,14 @@ const CompanyUserSchema = new mongoose.Schema(
     Email: { type: String, unique: true },
 
     CompanyName: String,
+    otp: { 
+      type: String, 
+      default: null 
+    },
+    otpExpires: { 
+      type: Date, 
+      default: null 
+    },
   
     UserProfileId:{
      type:mongoose.Schema.Types.ObjectId,

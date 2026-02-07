@@ -65,7 +65,7 @@ const checkSubscriptionStatus = (company) => {
  */
 const canUserLogin = (user, company, userRole) => {
   // Admins can always log in
-  if (user.Role === "Admin" || userRole === "admin") {
+  if (user.Role === "Admin" || userRole === "admin",userRole === "SuperAdmin"||user.Role === "SuperAdmin") {
     return {
       canLogin: true,
       message: "Admin access granted",

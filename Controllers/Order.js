@@ -3,11 +3,13 @@ const Order = require('../Models/User_order');
 const asyncHandler = require('express-async-handler');
 const User = require('../Models/User');
 const Admin = require('../Models/AdminOwner');
+const CompanyUser= require('../Models/CompanyUsers');
+const nodemailer = require('nodemailer');
 const UserProfile = require('../Models/Userprofile');
 const Company = require('../Models/Company');
 const Branch = require('../Models/Branch');
+const EcomerceProducts = require('../Models/EcomerceProducts');
 const Sale=require('../Models/SaleShema');
-const nodemailer = require('nodemailer');
 function generateOrderId() {
     const ts = Date.now().toString(36);
     const rand = Math.floor(Math.random() * 1e6).toString(36);
@@ -78,18 +80,46 @@ const createOrder = asyncHandler(async (req, res) => {
         tax = 0,
         paymentReference,
         subtotal,
+        ids,
         delivery = {} 
     } = req.body;
+   // 1. Fetch all products in the 'ids' array from the database
+    // Use $in to find multiple documents by an array of IDs
+    const foundProducts = await EcomerceProducts.find({
+        _id: { $in: ids }
+    }).exec();
 
-    console.log("Processing Order Ref:", paymentReference);
+    console.log(items)
     
+    console.log(foundProducts)
+    // 2. Validate quantities
+    for (const item of items) {
+        // Find the matching product from our database results
+        const dbProduct = foundProducts.find(
+            (p) => p._id.toString() === item.productId.toString()
+        );
+
+        if (!dbProduct) {
+            return res.status(404).json({ 
+                message: `Product with ID ${item.productId} not found.` 
+            });
+        }
+
+        // Check if requested quantity exceeds available stock
+        // Note: Change 'Quantity' to whatever your field name is (e.g., 'stock')
+        if (item.quantity > dbProduct.quantity) {
+            return res.status(400).json({ 
+                message: `Stock mismatch: ${dbProduct.name} only has ${dbProduct.quantity} items left.` 
+            });
+        }
+    }
     // --- 1. Basic Validations ---
     if (!Username) return res.status(400).json({ success: false, message: 'Username is required' });
     if (!Array.isArray(items) || items.length === 0) {
         return res.status(400).json({ success: false, message: 'Order must contain items' });
     }
 
-    const user = await User.findOne({ Username }).populate('UserProfileId').exec();
+    const user = await User.findOne({ Username }).populate('UserProfileId').exec()||  await Admin.findOne({ Username }).populate('UserProfileId').exec();
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
     // --- 2. Group Items by Vendor ---
@@ -321,7 +351,13 @@ const getUserOrders = asyncHandler(async (req, res) => {
     const UsesOrders = await User.findById(id).populate({
         path: 'UserProfileId',
         populate: { path: 'orders', model: 'Order' }
-    });
+    })||await Admin.findById(id).populate({
+        path: 'UserProfileId',
+        populate: { path: 'orders', model: 'Order' }
+    })||await CompanyUser.findById(id).populate({
+        path: 'UserProfileId',
+        populate: { path: 'orders', model: 'Order' }
+    })
     if (!UsesOrders) return res.status(404).json({ success: false, message: 'No order to display' });
 
     const finalOrders = UsesOrders.UserProfileId.orders.map(res=>{
