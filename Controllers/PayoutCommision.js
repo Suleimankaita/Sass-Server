@@ -20,7 +20,8 @@ const transferToBank = asynchandler(async (req, res) => {
 
     // 2. Find User and Validate Role
     const checkRoles = ['Admin', 'manager', 'Partner','SuperAdmin'];
-    const userFound = await Admin.findById(userid) || await CompanyUsers.findById(userid);
+   
+    const userFound = await Admin.findById(userid) 
     
     if (!userFound || !checkRoles.includes(userFound.Role)) {
         return res.status(401).json({ message: "Unauthorized: Insufficient permissions." });
@@ -43,11 +44,9 @@ const transferToBank = asynchandler(async (req, res) => {
     // ---------------------------------
 
     // 4. Find Company or Branch
-    const foundcom = await Company.findById(companyId) || await Branch.findById(companyId);
-    if (!foundcom) return res.status(404).json({ message: 'Company or Branch not found' });
-
+    
     // 5. Balance Check
-    const currentBalance = foundcom.walletBalance.reduce((prv, sum) => prv + sum, 0);
+    const currentBalance = userFound.walletBalance.reduce((prv, sum) => prv + sum, 0);
     const transferAmount = Number(amount);
 
     if (currentBalance < transferAmount) {
@@ -93,8 +92,8 @@ const transferToBank = asynchandler(async (req, res) => {
         );
 
         // Step 3 — Deduct from Local Database
-        foundcom.walletBalance[foundcom.walletBalance.length - 1] -= transferAmount;
-        await foundcom.save();
+        userFound.walletBalance[userFound.walletBalance.length - 1] -= transferAmount;
+        await userFound.save();
 
         res.status(201).json({ 
             success: true, 

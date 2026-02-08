@@ -9,23 +9,26 @@ const LogOut = asyncHandler(async (req, res) => {
   const user = req.user;
 
   if (!user) {
-    return res.status(401).json({ message: 'Unauthorized' });
+     res.status(401).json({ message: 'Unauthorized' });
   }
 
   let token;
-  if (user.Role === 'Admin') {
+  if(user&&user.Role === 'Admin'||user.Role === 'SuperAdmin') {
     token='AdminCookie';
   } else {
     token='jwt';
   }
   // Log the logout action
-  await UserLog.create({
-    userId: user._id,
-    Username: user.Username,
-    action: 'Logout',
-    date: new Date(),
-    time: new Date().toLocaleTimeString(),
-  });
+  if(user){
+
+      await UserLog.create({
+          userId: user._id,
+          Username: user.Username,
+          action: 'Logout',
+          date: new Date(),
+          time: new Date().toLocaleTimeString(),
+        });
+    }
 
   // 🔥 CLEAR AUTH COOKIE
   res.clearCookie(token, {

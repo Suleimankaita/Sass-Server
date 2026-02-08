@@ -26,7 +26,7 @@ const createDeal = asynchandler(async (req, res) => {
     paymentAmount,
   } = req.body;
 
-  if (!name || !targetId || !paymentAmount || !img) {
+  if (!name || !targetId || !paymentAmount ) {
     return res.status(400).json({ success: false, message: 'Missing required fields' });
   }
 
@@ -50,19 +50,20 @@ const createDeal = asynchandler(async (req, res) => {
       return res.status(403).json({ success: false, message: 'Unauthorized role' });
     }
   }
-
+  const typess=entityType==="Company"?"companyId":"branchId"
   // 3. Create the Deal
   const now = new Date();
   const deal = await DealProduct.create({
     name,
     ownerName: entity.BranchName || entity.CompanyName,
     ownerId: entity._id,
+    [typess]: entity._id,
     ownerType: entityType, 
     originalPrice: Number(originalPrice),
     dealPrice: Number(dealPrice),
     discount: Number(discount),
     unitsLeft: Number(unitsLeft),
-    img,
+    img:req.file.filename,
     startTime: now,
     dealEndTime: new Date(now.getTime() + 24 * 60 * 60 * 1000),
     categories,

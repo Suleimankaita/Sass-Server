@@ -4,7 +4,9 @@ const UserDeal = require("../Models/Cart");
 const EcomerceProducts = require("../Models/EcomerceProducts");
 const asyncHandler = require("express-async-handler");
 const mongoose = require("mongoose");
+const Deals=require("../Models/Deals");
 
+ 
 // Helper to resolve user and cart
 async function resolveUserAndCart(req, targetUserId) {
     const requesterId = req.userId || (req.user && req.user._id);
@@ -106,11 +108,16 @@ status: 'claimed'
 
 
     // Fetch all products at once
-    const products = await EcomerceProducts.find({
-    _id: { $in: productIds }
-    }).lean();
+    // const products = await EcomerceProducts.find({
+    // _id: { $in: productIds }
+    // }).lean()||;
 
+ const [regularProducts, dealProducts] = await Promise.all([
+  EcomerceProducts.find({ _id: { $in: productIds } }).lean().exec(),
+  Deals.find({ _id: { $in: productIds } }).lean().exec() // <--- Changed from 'Deals' to 'DealProduct'
+]);
 
+const products =[...regularProducts,...dealProducts]
     // Merge cart + product data
     const mergedCart = cart.map(cartItem => {
     const product = products.find(

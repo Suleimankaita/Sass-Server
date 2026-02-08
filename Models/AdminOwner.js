@@ -6,7 +6,9 @@ const AdminSchema = new mongoose.Schema(
     // Lastname: String,
     Username: { type: String, unique: true, index: true },
     Password: String,
-
+// Add these to your Schema
+resetOTP: { type: String },
+resetOTPExpires: { type: Date },
     // Company details  
     // CompanyName: String,
     // CompanyLogo: String,
@@ -69,6 +71,10 @@ otp: {
 
   },
   { timestamps: true }
+);
+AdminSchema.index(
+  { companyId:1}, 
+  { unique: true, partialFilterExpression: { companyId: { $type: "objectId" } } }
 );
 
 module.exports = mongoose.model("Admin", AdminSchema);

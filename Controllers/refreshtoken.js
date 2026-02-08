@@ -13,6 +13,8 @@ const Branch = require("../Models/Branch");
 const resolveAccount = async (role, id) => {
     console.log(23 ,role ,id)
   switch (role) {
+    case "Partner":
+      return Admin.findById(id).populate('companyId').populate("UserProfileId").select("+refreshToken Active Verified ");
     case "SuperAdmin":
       return Admin.findById(id).populate('companyId').populate("UserProfileId").select("+refreshToken Active Verified ");
     case "Admin"||"admin":
@@ -42,7 +44,7 @@ exports.refreshToken = asyncHandler(async (req, res) => {
       process.env.REFRESH_TOKEN_SECRET
     );
   } catch {
-    return res.status(401).json({ message: "Invalid refresh token" });
+    return res.status(403).json({ message: "Invalid refresh token" });
   }
 
   

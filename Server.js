@@ -520,7 +520,9 @@ apiRoutes.use("/GetAllOrders", require("./Routes/GetAllOrders"));
 apiRoutes.use("/AddProducts",upload.array('file'), require("./Routes/AddProducts"));
 
 apiRoutes.use("/GetSale/", require("./Routes/GetSale"));
+
 apiRoutes.use("/SearchBank", require("./Routes/SearchBank"));
+
 apiRoutes.use("/PayOutCheckout", require("./Routes/PayOutTransaction"));
 
 apiRoutes.use("/UpdateCompanyUser",upload.single('file'), require("./Routes/UpdateCompanyUser"));
@@ -531,6 +533,7 @@ apiRoutes.use("/UpdateProduct", upload.array('file'), require("./Routes/UpdatePr
 
 
 apiRoutes.use("/logout", require("./Routes/LogOut"));
+apiRoutes.use("/Auth/ForceLogout", require("./Routes/ForceLogout"));
 
 apiRoutes.use("/LogOutAll", require("./Routes/LogOutAll"));
 
@@ -545,6 +548,8 @@ apiRoutes.use("/Auth/Login", require("./Routes/Auth"));
 apiRoutes.use("/Auth/Regs", require("./Routes/UserReg"));
 
 apiRoutes.use("/Auth/CompanyAuth", require("./Routes/CompanyAuth"));
+
+apiRoutes.use("/api/auth/", require("./Routes/ResetPassword"));
 
 apiRoutes.use("/Products/", require("./Routes/GetComapnyProduct"));
 
@@ -568,7 +573,7 @@ apiRoutes.use("/CompanyUsersRegs", require("./Routes/CompanyUsersRegs"));
 
 apiRoutes.use("/Cart", require("./Routes/Cart"));
 
-apiRoutes.use("/Deals", require("./Routes/Deals"));
+apiRoutes.use("/Deals",upload.single("file"), require("./Routes/Deals"));
 
 apiRoutes.use("/WalletBalance", require("./Routes/WalletBalence"));
 
@@ -577,6 +582,10 @@ apiRoutes.use("/CreateBranch", require("./Routes/CreateBranch"));
 apiRoutes.use("/Otp", require("./Routes/PayoutOtp"));
 
 apiRoutes.use("/Notifications", require("./Routes/Notifications"));
+
+apiRoutes.use("/AdminWalletBalance", require("./Routes/AdminWalletBalance"));
+
+apiRoutes.use("/PayoutAdmin", require("./Routes/PayoutAdmin"));
 
 apiRoutes.use("/Seen", require("./Routes/Seen"));
 

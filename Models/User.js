@@ -5,6 +5,9 @@ const UserSchema = new mongoose.Schema(
     Firstname: String,
     Lastname: String,
     Username: { type: String, unique: true }, 
+    // Add these to your Schema
+resetOTP: { type: String },
+resetOTPExpires: { type: Date },
     WalletNumber: Number,
     WalletBalance: { type: Number, default: 0 },
     UserLogId: [{ type: mongoose.Schema.Types.ObjectId, ref: "UserLog" }],

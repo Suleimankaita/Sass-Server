@@ -10,6 +10,8 @@ const Company = require('../Models/Company');
 const Branch = require('../Models/Branch');
 const EcomerceProducts = require('../Models/EcomerceProducts');
 const Sale=require('../Models/SaleShema');
+const Deals=require("../Models/Deals");
+
 function generateOrderId() {
     const ts = Date.now().toString(36);
     const rand = Math.floor(Math.random() * 1e6).toString(36);
@@ -85,20 +87,25 @@ const createOrder = asyncHandler(async (req, res) => {
     } = req.body;
    // 1. Fetch all products in the 'ids' array from the database
     // Use $in to find multiple documents by an array of IDs
-    const foundProducts = await EcomerceProducts.find({
-        _id: { $in: ids }
-    }).exec();
+   const [regularProducts, dealProducts] = await Promise.all([
+  EcomerceProducts.find({ _id: { $in: ids } }).lean().exec(),
+  Deals.find({ _id: { $in: ids } }).lean().exec() // <--- Changed from 'Deals' to 'DealProduct'
+]);
 
-    console.log(items)
+// 2. Combine results
+const foundProducts = [...regularProducts, ...dealProducts];
+
+    console.log( companyId, 
+        branchId, )
     
-    console.log(foundProducts)
+    // console.log(foundProducts)
     // 2. Validate quantities
     for (const item of items) {
         // Find the matching product from our database results
         const dbProduct = foundProducts.find(
             (p) => p._id.toString() === item.productId.toString()
         );
-
+console.log(dbProduct)
         if (!dbProduct) {
             return res.status(404).json({ 
                 message: `Product with ID ${item.productId} not found.` 
@@ -107,9 +114,9 @@ const createOrder = asyncHandler(async (req, res) => {
 
         // Check if requested quantity exceeds available stock
         // Note: Change 'Quantity' to whatever your field name is (e.g., 'stock')
-        if (item.quantity > dbProduct.quantity) {
+        if (item.quantity > dbProduct.quantity||item.quantity >dbProduct.unitsLeft) {
             return res.status(400).json({ 
-                message: `Stock mismatch: ${dbProduct.name} only has ${dbProduct.quantity} items left.` 
+                message: `Stock mismatch: ${dbProduct.name} only has ${dbProduct.quantity||dbProduct.unitsLeft} items left.` 
             });
         }
     }
@@ -139,7 +146,7 @@ const createOrder = asyncHandler(async (req, res) => {
         }
 
         const price = Number(it.soldAtPrice) || 0;
-        const quantity = Number(it.quantity || it.qty) || 0;
+        const quantity = Number(it.quantity || it.qty||dbProduct.unitsLeft) || 0;
         
         vendorGroups[groupKey].items.push({
             productId: it.productId || null,
@@ -220,7 +227,7 @@ const createOrder = asyncHandler(async (req, res) => {
         totalPartnerCommission += partnerShare;
 
         // Update Wallets
-        updatePromises.push(User.updateMany({ Role: "Partner" }, { $push: { walletBalance: partnerShare } }));
+        updatePromises.push(Admin.updateMany({ Role: "Partner" }, { $push: { walletBalance: partnerShare } }));
         updatePromises.push(Admin.updateMany({ Role: "SuperAdmin" }, { $push: { walletBalance: superAdminShare } }));
 
         if (group.companyId && group.companyId !== "null") {

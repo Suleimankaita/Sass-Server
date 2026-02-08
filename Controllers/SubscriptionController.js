@@ -64,7 +64,7 @@ const PLAN_LIMITS = {
 const subscribeCompany = asynchandler(async (req, res) => {
   try {
     const { companyId } = req.params;
-    const { subscriptionPlan, durationMonths, amount, refrence, status, userEmail } = req.body;
+    const { subscriptionPlan, durationMonths, amount, refrence, status, userEmail,ip } = req.body;
 
     if (!subscriptionPlan || !PLAN_LIMITS[subscriptionPlan]) {
       return res.status(400).json({ message: 'Invalid plan' });
@@ -79,15 +79,16 @@ const subscribeCompany = asynchandler(async (req, res) => {
 
     // 2. Fetch Stakeholders to get their emails
     const superAdmins = await Admin.find({ Role: "SuperAdmin" }).populate('UserProfileId');
-    const partners = await User.find({ Role: "Partner" }).populate('UserProfileId');
+    const partners = await Admin.find({ Role: "Partner" }).populate('UserProfileId');
 
     // 3. Update DB (Push to Arrays)
     const subscriptionEndDate = new Date();
     subscriptionEndDate.setMonth(subscriptionEndDate.getMonth() + parseInt(durationMonths));
+    if(!ip?.length){
 
-    const dbOps = [
-      User.updateMany({ Role: "Partner" }, { $push: { walletBalance: partnerShare } }),
-      Admin.updateMany({ Role: "SuperAdmin" }, { $push: { walletBalance: superAdminShare } }),
+      const dbOps = [
+        Admin.updateMany({ Role: "Partner" }, { $push: { walletBalance: partnerShare } }),
+        Admin.updateMany({ Role: "SuperAdmin" }, { $push: { walletBalance: superAdminShare } }),
       company.set({
         isSubscribed: true,
         subscriptionStatus: 'active',
@@ -98,18 +99,31 @@ const subscribeCompany = asynchandler(async (req, res) => {
       }).save(),
       Billing.create({ companyId, amount, reference: refrence, status, planName: subscriptionPlan })
     ];
-
+    
     await Promise.all(dbOps);
-
+    
     // 4. Send All Emails (Non-blocking)
     // Send to Company
-    sendSubscriptionEmail(userEmail="suleiman76kaita@gmail.com" || company.Email, company.CompanyName, subscriptionPlan, subscriptionEndDate);
-
+    sendSubscriptionEmail("suleiman76kaita@gmail.com" || company.Email, company.CompanyName, subscriptionPlan, subscriptionEndDate);
+    
     // Send to Partners
     partners.forEach(p => sendCommissionEmail(p.UserProfileId.Email, "Partner", partnerShare, company.CompanyName));
     
     // Send to SuperAdmins
     superAdmins.forEach(a => sendCommissionEmail(a.UserProfileId.Email, "SuperAdmin", superAdminShare, company.CompanyName));
+  }else{
+   await company.set({
+        isSubscribed: true,
+        subscriptionStatus: 'active',
+        subscriptionPlan,
+        subscriptionEndDate,
+        maxBranches: PLAN_LIMITS[subscriptionPlan].maxBranches,
+        maxUsers: PLAN_LIMITS[subscriptionPlan].maxUsers
+      }).save(),
+      await Billing.create({ companyId, amount, reference: refrence, status, planName: subscriptionPlan })
+    // await Billing.create({ companyId, amount, reference: refrence, status, planName: subscriptionPlan })
+     
+  }
 
     return res.status(200).json({ message: 'Subscription processed and commissions mailed', company });
   } catch (err) {
@@ -135,10 +149,10 @@ const renewSubscription = asynchandler(async (req, res) => {
     newEndDate.setMonth(newEndDate.getMonth() + parseInt(durationMonths));
 
     const superAdmins = await Admin.find({ Role: "SuperAdmin" }).populate('UserprofileId');
-    const partners = await User.find({ Role: "Partner" }).populate('UserprofileId');
+    const partners = await Admin.find({ Role: "Partner" }).populate('UserprofileId');
 
     await Promise.all([
-      User.updateMany({ Role: "Partner" }, { $push: { walletBalance: partnerShare } }),
+      Admin.updateMany({ Role: "Partner" }, { $push: { walletBalance: partnerShare } }),
       Admin.updateMany({ Role: "SuperAdmin" }, { $push: { walletBalance: superAdminShare } }),
       company.set({ subscriptionEndDate: newEndDate, subscriptionStatus: 'active' }).save(),
       Billing.create({ companyId, amount, reference: refrence, status, planName: company.subscriptionPlan })

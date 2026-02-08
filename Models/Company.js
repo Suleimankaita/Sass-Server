@@ -9,7 +9,7 @@ const CompanySchema = new mongoose.Schema(
   index: true,
   default: () => Math.floor(100000 + Math.random() * 900000) // 6-digit
 },
-
+  
     ownerId: { type: mongoose.Schema.Types.ObjectId, ref: "Admin" },
     CompanySettingsId: { type: mongoose.Schema.Types.ObjectId, ref: "CompanySettings" },
     TransactionId: [{ type: mongoose.Schema.Types.ObjectId, ref: "Transaction" }],
@@ -42,7 +42,7 @@ const CompanySchema = new mongoose.Schema(
     },
     trialEndDate: {
       type: Date,
-      default: () => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+      default: () => new Date(Date.now()+ 14 * 24 * 60 * 60 * 1000), // 7 days from now
     },
     isSubscribed: {
       type: Boolean,

@@ -1,5 +1,6 @@
 const asyncHandler=require('express-async-handler');
 const EcomerceProduct=require("../Models/EcomerceProducts");
+const Deals=require("../Models/Deals");
 const Branch=require("../Models/Branch");
 const Company=require("../Models/Company");
 
@@ -10,25 +11,27 @@ const GetEcomersingleProducts=asyncHandler(async(req,res)=>{
 
             if(!id)return res.status(404).json({'message':'Product Required'})
 
-            const foundproduct=await EcomerceProduct.findById(id);
-
+            const foundproduct=await EcomerceProduct.findById(id)||await Deals.findById(id);
+            console.log(foundproduct)
             if(!foundproduct)return res.status(400).json({'message':'Product Not found'})
             
-            const found=await Company.findById(foundproduct.companyId)|| await Branch.findById(foundproduct.branchId) 
+            const found=await Company.findById(foundproduct?.companyId)|| await Branch.findById(foundproduct?.branchId) 
 
             if(!found) return res.status(400).json({'message':'Company or Branch not found'})
 
                 const filteredByCate=await EcomerceProduct.findOne({categoryName:foundproduct.categoryName})
                 const result ={
                     name:foundproduct.name,
-                    img:foundproduct.img,
-                    soldAtPrice:foundproduct.soldAtPrice,
-                    actualPrice:foundproduct.actualPrice,
+                    img:[foundproduct.img], 
+                    companyId:foundproduct.companyId||null,
+                    branchId:foundproduct?.branchId||null,
+                    soldAtPrice:foundproduct.soldAtPrice||foundproduct.dealPrice,
+                    actualPrice:foundproduct.actualPrice||found.originalPrice,
                     category:foundproduct.categoryName,
                     description:foundproduct.description,
-                    stock:foundproduct.quantity,
-                    CompanyName:found.CompanyName,
-                    filteredByCate:filteredByCate._doc
+                    stock:foundproduct.quantity||foundproduct.unitsLeft,
+                    CompanyName:found?found.CompanyName:'',
+                    filteredByCate:filteredByCate? filteredByCate._doc:[],
 
                 }
                 res.status(201).json(result)
