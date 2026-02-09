@@ -543,6 +543,8 @@ apiRoutes.use("/Sell", require("./Routes/Sell"));
 
 apiRoutes.use("/GetAllSales", require("./Routes/GetAllSale"));
 
+apiRoutes.use("/UserOtp/", require("./Routes/GenerateOtp"));
+
 apiRoutes.use("/Auth/Login", require("./Routes/Auth"));
 
 apiRoutes.use("/Auth/Regs", require("./Routes/UserReg"));

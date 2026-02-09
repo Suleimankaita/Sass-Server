@@ -9,8 +9,9 @@ const CompanyUserSchema = new mongoose.Schema(
     Password: String,
     Email: { type: String, unique: true },
 // Add these to your Schema
-resetOTP: { type: String },
-resetOTPExpires: { type: Date },
+    resetOTP: { type: String },
+   IsOtpverified: { type: Boolean,default:false },
+    resetOTPExpires: { type: Date },
     CompanyName: String,
     otp: { 
       type: String, 

@@ -33,7 +33,7 @@ const CompanyRegs = asyncHandler(async (req, res) => {
     CAC_Number,
   } = req.body;
 
-  if (!Username || !Password || !Firstname || !Lastname || !Email || !CompanyName || !CAC_Number) {
+  if (!Username || !Password || !Firstname || !Lastname || !Email || !CompanyName ) {
     return res.status(400).json({ message: 'All required fields must be provided' });
   }
 

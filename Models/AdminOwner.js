@@ -7,8 +7,9 @@ const AdminSchema = new mongoose.Schema(
     Username: { type: String, unique: true, index: true },
     Password: String,
 // Add these to your Schema
-resetOTP: { type: String },
-resetOTPExpires: { type: Date },
+      resetOTP: { type: String },
+      IsOtpverified: { type: Boolean,default:false },
+    resetOTPExpires: { type: Date },
     // Company details  
     // CompanyName: String,
     // CompanyLogo: String,

@@ -63,6 +63,7 @@ const addToCart = asyncHandler(async (req, res) => {
         cartItem.discount = discount !== undefined ? discount : cartItem.discount;
         await cartItem.save();
     } else {
+      console.log(img)
         // Create new cart item
         cartItem = new UserDeal({
             userId: effectiveUserId,
@@ -71,7 +72,7 @@ const addToCart = asyncHandler(async (req, res) => {
             quantity: qty,
             dealPrice,
             name,
-            img,
+            img:img[0],
             originalPrice,
             price,
             discount
