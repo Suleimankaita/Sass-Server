@@ -12,33 +12,32 @@ const nodemailer = require('nodemailer');
 
   const transporter = nodemailer.createTransport({
         service: 'gmail', 
-        auth: { user: "suleiman20015kaita@gmail.com", pass: "wwwh pvxz cqvl htjm" }
+        auth: { user: "ysstore.markets@gmail.com", pass: "gdjv kksj apjo urri" }
     });
 
 
-const findUserAndEmail = async (Username) => {
-  if (!Username) return null;
-
-  const usernameLower = Username;
+const findUserAndEmail = async (id) => {
+  if (!id) return null;
 
   // 1. Find user in correct order
-  let user = await Admin.findOne({ Username: usernameLower }).exec();
+  let user = await Admin.findById(id.toString());
   let role = "admin";
 
   if (!user) {
-    user = await CompanyUsers.findOne({ Username: usernameLower }).exec();
+    user = await CompanyUsers.findById(id.toString());
     role = "companyUser";
   }
 
   if (!user) {
-    user = await Users.findOne({ Username: usernameLower }).exec();
+    user = await Users.findById(id.toString());
     role = "user";
   }
 
+    console.log(user)
   if (!user) return null;
 
   // 2. Find profile linked to user
-  const profile = await UserProfile.findById(user.UserProfileId).exec();
+  const profile = await UserProfile.findById(user.UserProfileId);
   if (!profile || !profile.Email) return null;
 
   return {
@@ -52,10 +51,10 @@ const findUserAndEmail = async (Username) => {
 // 🔵 1. REQUEST OTP (Expires in 2 Minutes)
 const requestVerificationOTP = asyncHandler(async (req, res) => {
     const { Username } = req.body;
-    
-    if (!Username) return res.status(400).json({ message: "Username is required." });
+    const id=req.userId
+    if (!id) return res.status(400).json({ message: "User ID is required." });
 
-    const result = await findUserAndEmail(Username);
+    const result = await findUserAndEmail(id);
 
     if (!result || !result.email) {
         return res.status(404).json({ message: "No email associated with this account." });
@@ -74,7 +73,7 @@ const requestVerificationOTP = asyncHandler(async (req, res) => {
 
     const mailOptions = {
         from: `"YsStore Security" <${process.env.EMAIL_USER}>`,
-        to: 'suleimanyusufdamale@icloud.com',
+        to: "Suleiman20015kaita@gmail.com",
         subject: `Your Verification Code: ${otp}`,
         html: `
             <div style="font-family: sans-serif; text-align: center; padding: 20px;">
@@ -94,8 +93,8 @@ const requestVerificationOTP = asyncHandler(async (req, res) => {
 // 🔵 2. VERIFY OTP (Identity Confirmation)
 const verifyUserOTP = asyncHandler(async (req, res) => {
     const { Username, otp } = req.body;
-
-    const result = await findUserAndEmail(Username);
+    const id=req.userId
+    const result = await findUserAndEmail(id);
     if (!result) return res.status(404).json({ message: "Account not found." });
 
     const { user } = result;

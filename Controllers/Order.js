@@ -126,7 +126,7 @@ console.log(dbProduct)
         return res.status(400).json({ success: false, message: 'Order must contain items' });
     }
 
-    const user = await User.findOne({ Username }).populate('UserProfileId').exec()||  await Admin.findOne({ Username }).populate('UserProfileId').exec();
+    const user = await User.findOne({ Username }).populate('UserProfileId').exec()||  await Admin.findOne({ Username }).populate('UserProfileId').exec()||await CompanyUser.findOne({ Username }).populate('UserProfileId').exec();
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
     // --- 2. Group Items by Vendor ---

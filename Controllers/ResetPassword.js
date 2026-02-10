@@ -170,6 +170,10 @@ const resetPassword = asyncHandler(async (req, res) => {
     } else {
         // Admins, Users, and CompanyUsers store password in the UserProfile document
         // We find the profile by ID and update it specifically
+        if(user.password){
+            user.password = hashed;
+            await user.save();
+        }
         await UserProfile.findByIdAndUpdate(user.UserProfileId._id, {
             password: hashed // Note: your schema uses lowercase 'password'
         });

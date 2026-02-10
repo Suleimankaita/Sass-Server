@@ -14,6 +14,9 @@ const AddProducts = asyncHandler(async (req, res) => {
   // Ensure img is always array
   const images = Array.isArray(img) ? img : [img];
 
+  console.log(req.files)
+  console.log(images)
+
   // Validate price & quantity
   if (isNaN(price) || isNaN(quantity)) {
     return res.status(400).json({ message: "Price and Quantity must be numbers" });

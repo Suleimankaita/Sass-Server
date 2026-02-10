@@ -545,9 +545,14 @@ apiRoutes.use("/GetAllSales", require("./Routes/GetAllSale"));
 
 apiRoutes.use("/UserOtp/", require("./Routes/GenerateOtp"));
 
+apiRoutes.use("/comfirmOtp/", require("./Routes/comfirmOtp"));
+apiRoutes.use("/GetAccountVerifiedOtp", require("./Routes/GetAccountVerifiedOtp"));
+
 apiRoutes.use("/Auth/Login", require("./Routes/Auth"));
 
 apiRoutes.use("/Auth/Regs", require("./Routes/UserReg"));
+
+apiRoutes.use("/", require("./Routes/GetSimilarCate"));
 
 apiRoutes.use("/Auth/CompanyAuth", require("./Routes/CompanyAuth"));
 

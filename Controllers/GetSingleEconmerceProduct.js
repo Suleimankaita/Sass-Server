@@ -22,7 +22,7 @@ const GetEcomersingleProducts=asyncHandler(async(req,res)=>{
                 const filteredByCate=await EcomerceProduct.findOne({categoryName:foundproduct.categoryName})
                 const result ={
                     name:foundproduct.name,
-                    img:[foundproduct.img], 
+                    img:Array.isArray(foundproduct.img)?foundproduct.img: [foundproduct.img],
                     companyId:foundproduct.companyId||null,
                     branchId:foundproduct?.branchId||null,
                     soldAtPrice:foundproduct.soldAtPrice||foundproduct.dealPrice,

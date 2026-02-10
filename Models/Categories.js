@@ -1,9 +1,41 @@
-const mongosee=require('mongoose');
+const mongoose = require("mongoose");
 
-const CategoriesSchema=new mongosee.Schema({
-    name:String
-},{
-    timestamps:true
-})
+const CategoriesSchema = new mongoose.Schema({
+    name: {
+        type: String,
+        required: true
+    },
 
-module.exports=mongosee.model('CateGories',CategoriesSchema)
+    normalizedName: {
+        type: String,
+        index: true,
+        default: null
+    },
+
+    canonicalName: {
+        type: String,
+        index: true,
+        default: null
+    },
+
+    embedding: {
+        type: [Number],
+        default: null
+    },
+
+    mergeStatus: {
+        type: String,
+        enum: ["none", "pending", "merged"],
+        default: "none"
+    },
+
+    mergedInto: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "CateGories",
+        default: null
+    }
+}, {
+    timestamps: true
+});
+
+module.exports = mongoose.model("CateGories", CategoriesSchema);

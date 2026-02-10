@@ -22,9 +22,8 @@ const ProductRegs = asyncHandler(async (req, res) => {
   const files = req.files;
 
   console.log(req.body)
-  console.log(req.files)
   // 1. Validation
-  if (!name || !quantity ||!barcode|| !Selection || !id || !CompanyId || !categoryName || !soldAtPrice || !actualPrice) {
+  if (!name || !quantity ||!barcode|| !Selection || !id || !CompanyId || !categoryName || !soldAtPrice || !actualPrice||!req.files) {
     return res.status(400).json({ message: 'All required fields must be provided' });
   }
 
@@ -72,6 +71,9 @@ const ProductRegs = asyncHandler(async (req, res) => {
   // 5. Prepare Product Data
   // const finalSku = sku || `SKU-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
   const imgPaths = files && Array.isArray(files) ? files.map(file => file.filename) : [];
+  console.log("Paths    ", imgPaths)
+  console.log("files   ",req.files)
+
     const ids= entityType==="Branch"?"branchId":"companyId"
   const baseProductData = {
     [ids]: targetEntity._id,

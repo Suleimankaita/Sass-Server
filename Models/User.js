@@ -7,6 +7,7 @@ const UserSchema = new mongoose.Schema(
     Username: { type: String, unique: true }, 
     // Add these to your Schema
       resetOTP: { type: String },
+      
       resetOTPExpires: { type: Date },
       IsOtpverified: { type: Boolean,default:false },
     WalletNumber: Number,
