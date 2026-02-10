@@ -649,6 +649,8 @@ apiRoutes.use("/paystack", require("./Routes/Paystack"));
 
 apiRoutes.use("/updateOrderStatus", require("./Routes/UpdateOrder"));
 
+apiRoutes.use("/support", require("./Routes/HelpCenter"));
+
 apiRoutes.use("/UserOrders", require("./Routes/GetUserOrders"));
 
 apiRoutes.use("/api/Verify/CompanyVeried", require("./Routes/VerifyCompany"));
