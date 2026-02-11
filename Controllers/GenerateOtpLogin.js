@@ -12,7 +12,7 @@ const nodemailer = require('nodemailer');
 
   const transporter = nodemailer.createTransport({
         service: 'gmail', 
-        auth: { user: "ysstore.markets@gmail.com", pass: "gdjv kksj apjo urri" }
+        auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
     });
 
 
@@ -73,7 +73,7 @@ const requestVerificationOTP = asyncHandler(async (req, res) => {
 
     const mailOptions = {
         from: `"YsStore Security" <${process.env.EMAIL_USER}>`,
-        to: "Suleiman20015kaita@gmail.com",
+        to: email,
         subject: `Your Verification Code: ${otp}`,
         html: `
             <div style="font-family: sans-serif; text-align: center; padding: 20px;">

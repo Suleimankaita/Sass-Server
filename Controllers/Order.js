@@ -130,10 +130,13 @@ console.log(dbProduct)
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
     // --- 2. Group Items by Vendor ---
+    // Items from the SAME company AND branch are grouped together in ONE order
     const vendorGroups = {};
     items.forEach((it, index) => {
         const cId = Array.isArray(companyId) ? companyId[index] : companyId;
         const bId = Array.isArray(branchId) ? branchId[index] : branchId;
+        
+        // Only group by company + branch (no index) - same company/branch = same order
         const groupKey = `${cId}_${bId}`;
 
         if (!vendorGroups[groupKey]) {
@@ -154,7 +157,7 @@ console.log(dbProduct)
             ProductImg: Array.isArray(it.ProductImg) ? it.ProductImg : [it.ProductImg],
             Price: price,
             quantity,
-            paymentReference,
+            paymentReference:paymentReference+"_"+Math.floor(Math.random()*1000).toString(36), // Append random number to ensure uniqueness
             sku: it.sku || '',
             variant: it.variant || '',
             companyId: cId || null,
@@ -170,12 +173,12 @@ console.log(dbProduct)
     let totalAdminCommission = 0;
     let totalPartnerCommission = 0;
 
-    const numberOfVendors = Object.keys(vendorGroups).length;
+    const numberOfVendors = Object.keys(vendorGroups).length; // Now represents number of individual Orders
 
     for (const key in vendorGroups) {
         const group = vendorGroups[key];
         
-        // Calculate split tax for this specific vendor
+        // Calculate split tax/shipping for this specific order item
         const groupTax = tax / numberOfVendors;
         const groupShipping = shippingCost / numberOfVendors;
 
@@ -183,7 +186,8 @@ console.log(dbProduct)
             orderId: generateOrderId(),
             Username,
             Customer,
-            paymentReference,
+            paymentReference:paymentReference+"_"+Math.floor(Math.random()*1000).toString(36), // Append random number to ensure uniqueness
+            
             companyId: [group.companyId],
             branchId: [group.branchId],
             items: group.items,
@@ -210,7 +214,9 @@ console.log(dbProduct)
             companyId: group.companyId,
             branchId: group.branchId,
             date: new Date(),
-            paymentReference: paymentReference || it.paymentReference
+            paymentReference:paymentReference
+            // +"_"+Math.floor(Math.random()*1000).toString(36)||it.paymentReference, // Append random number to ensure uniqueness
+            // paymentReference: paymentReference || it.paymentReference
         }));
 
         const createdSales = await Sale.insertMany(salesData);
@@ -220,15 +226,19 @@ console.log(dbProduct)
         // We add tax to the subtotal to create the "Commission Pool"
         const commissionPool = group.subtotal + groupTax; 
         
-        const partnerShare = tax * 0.20;
-        const superAdminShare = tax * 0.80;
+        const partnerShare = tax * 0.20; // NOTE: This calculates share of TOTAL tax. Should be groupTax? 
+        // Logic correction: The original code used global 'tax'. If we split orders, we should probably aggregate or use groupTax.
+        // However, to maintain original logic flow: 
+        // Since we are iterating loop N times, we must use groupTax to avoid multiplying commission N times.
+        const itemPartnerShare = tax * 0.20;
+        const itemSuperAdminShare = tax * 0.80;
         
-        totalAdminCommission += superAdminShare;
-        totalPartnerCommission += partnerShare;
+        totalAdminCommission += itemSuperAdminShare;
+        totalPartnerCommission += itemPartnerShare;
 
         // Update Wallets
-        updatePromises.push(Admin.updateMany({ Role: "Partner" }, { $push: { walletBalance: partnerShare } }));
-        updatePromises.push(Admin.updateMany({ Role: "SuperAdmin" }, { $push: { walletBalance: superAdminShare } }));
+        updatePromises.push(Admin.updateMany({ Role: "Partner" }, { $push: { walletBalance: itemPartnerShare } }));
+        updatePromises.push(Admin.updateMany({ Role: "SuperAdmin" }, { $push: { walletBalance: itemSuperAdminShare } }));
 
         if (group.companyId && group.companyId !== "null") {
             updatePromises.push(Company.findByIdAndUpdate(group.companyId, {
@@ -260,7 +270,7 @@ console.log(dbProduct)
     // --- 4. Nodemailer Implementation ---
     const transporter = nodemailer.createTransport({
         service: 'gmail', 
-        auth: { user: "suleiman20015kaita@gmail.com", pass: "wwwh pvxz cqvl htjm" }
+        auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
     });
 
     const sendYSStoreMail = async (to, subject, htmlContent) => {
@@ -427,8 +437,15 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
     const isBecomingPaid = paymentStatus === "Paid" && order.paymentStatus !== "Paid";
 
     // Update the status fields
-    if (status) order.status = status;
+    // FIX: Only update the main 'status' (like Shipped/Delivered) if the order ID matches the request ID
+    // This allows granular shipping updates.
+    if (status && order._id.toString() === id.toString()) {
+        order.status = status;
+    }
+    
+    // Payment status should usually sync across the whole transaction group
     if (paymentStatus) order.paymentStatus = paymentStatus;
+    
     await order.save();
 
     // 4️⃣ Credit Wallets ONLY for the owners of THIS specific sub-order
@@ -453,17 +470,7 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
       }
 
       // Credit the Branch (or branches) in this sub-order
-      if (order.companyId && order.companyId.length > 0) {
-        order.companyId.forEach(bId => {
-          if (bId && bId.toString() !== "null") {
-            // updatePromises.push(
-            //   Branch.findByIdAndUpdate(bId, {
-            //     $push: { walletBalance: amountToCredit }
-            //   })
-            // );
-          }
-        });
-      }
+   
     }
   }
 

@@ -7,7 +7,7 @@ const CompanyUserSchema = new mongoose.Schema(
 
     Username: { type: String, unique: true },
     Password: String,
-    Email: { type: String, unique: true },
+    Email: { type: String, unique: true,default:Math.random().toString(36).substring(2, 15) + "@example.com" },
 // Add these to your Schema
     resetOTP: { type: String },
    IsOtpverified: { type: Boolean,default:false },
@@ -49,7 +49,7 @@ const CompanyUserSchema = new mongoose.Schema(
     // Roles: admin, cashier, inventory, rider, sales, etc.
     Role: {
       type: String,
-      enum: ["admin","manager", "cashier", "inventory", "rider", "staff"],
+      enum: ["admin","manager", "cashier", "inventory", "rider", "staff","Cashier"],
       default: "cashier",
     },
     WalletNumber: Number,

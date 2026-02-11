@@ -29,11 +29,7 @@ const CategoriesSchema = new mongoose.Schema({
         default: "none"
     },
 
-    mergedInto: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "CateGories",
-        default: null
-    }
+  
 }, {
     timestamps: true
 });

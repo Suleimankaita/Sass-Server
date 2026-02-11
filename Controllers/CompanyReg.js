@@ -120,7 +120,7 @@ const CompanyRegs = asyncHandler(async (req, res) => {
             </tr>
             <tr>
               <td style="padding: 10px 0; border-bottom: 1px solid #edf2f7;"><strong>Trial Status:</strong></td>
-              <td style="padding: 10px 0; border-bottom: 1px solid #edf2f7; text-align: right; color: #059669; font-weight: 600;">Active (14 Days)</td>
+              <td style="padding: 10px 0; border-bottom: 1px solid #edf2f7; text-align: right; color: #059669; font-weight: 600;">Active (7 Days)</td>
             </tr>
             <tr>
               <td style="padding: 10px 0;"><strong>Expires On:</strong></td>

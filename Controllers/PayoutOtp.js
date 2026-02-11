@@ -16,7 +16,7 @@ const Generate = asynchandler(async (req, res) => {
     const userId = req.userId; // Ensure your auth middleware provides this
 
     // Find the user in either collection
-    const user = await Admin.findById(userId) || await CompanyUsers.findById(userId);
+    const user = await Admin.findById(userId).populate("UserProfileId") || await CompanyUsers.findById(userId).populate("UserProfileId");
     if (!user) return res.status(404).json({ message: "User not found" });
 
     // 1. Generate the OTP
@@ -32,8 +32,8 @@ const Generate = asynchandler(async (req, res) => {
         service: 'gmail', // or your SMTP provider
         auth: {
             // user: process.env.EMAIL_USER, // Your email
-            user: "suleiman20015kaita@gmail.com", // Your email
-            pass: "wwwh pvxz cqvl htjm", // Your App Password
+            user: process.env.EMAIL_USER, // Your email
+            pass: process.env.EMAIL_PASS, // Your App Password
         },
     });
 
@@ -42,7 +42,7 @@ const Generate = asynchandler(async (req, res) => {
         await transporter.sendMail({
             from: `"Secure Payout" <${process.env.EMAIL_USER}>`,
             // to: user.Username, // Assuming 'Username' stores the email address
-            to: "suleiman76kaita@gmail.com", // Assuming 'Username' stores the email address
+            to: user?.UserProfileId.Email, // Assuming 'Email' is the field storing the email address
             subject: "Your Payout Verification Code",
              attachments: [{
                     filename: 'YSStore.png',

@@ -15,7 +15,7 @@ const transporter = nodemailer.createTransport({
   //   user: process.env.EMAIL_USER,
   //   pass: process.env.EMAIL_PASS,
   // },
-        auth: { user: "suleiman20015kaita@gmail.com", pass: "wwwh pvxz cqvl htjm" }
+        auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
 
 });
 
@@ -104,7 +104,7 @@ const subscribeCompany = asynchandler(async (req, res) => {
     
     // 4. Send All Emails (Non-blocking)
     // Send to Company
-    sendSubscriptionEmail("suleiman76kaita@gmail.com" || company.Email, company.CompanyName, subscriptionPlan, subscriptionEndDate);
+    sendSubscriptionEmail(userEmail|| company.Email, company.CompanyName, subscriptionPlan, subscriptionEndDate);
     
     // Send to Partners
     partners.forEach(p => sendCommissionEmail(p.UserProfileId.Email, "Partner", partnerShare, company.CompanyName));

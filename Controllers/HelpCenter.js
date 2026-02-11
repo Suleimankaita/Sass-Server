@@ -1,31 +1,38 @@
 const nodemailer = require('nodemailer');
 const path = require('path');
+const asyncHandler = require('express-async-handler');
 
-const submitTicket = async (req, res) => {
+const submitTicket = asyncHandler(async (req, res) => {
     try {
-        const { category = 'General', description = '', email = '' } = req.body || {};
+        const { category, description, email } = req.body;
         const files = req.files || [];
         const refId = `YS-FB${Math.floor(Math.random() * 9000) + 1000}`;
 
-        // 1. DYNAMIC TRANSPORTER: Works with any SMTP service
+        // 1. Create CID-based attachments
+        // We give each file a unique 'cid' string
+        const attachments = files.map((f, index) => ({
+            filename: f.filename,
+            path: f.path,
+            cid: `img_attach_${index}` // This is the ID we reference in the HTML
+        }));
+
+        // 2. Generate HTML that references the CID
+        const imageGalleryHtml = attachments.map(att => `
+            <div style="margin-top: 15px;">
+                <img src="cid:${att.cid}" alt="Attachment" style="max-width: 100%; border-radius: 8px; border: 1px solid #e2e8f0;" />
+            </div>
+        `).join('');
+
         const transporter = nodemailer.createTransport({
-            host: process.env.EMAIL_HOST,       // e.g., smtp.sendgrid.net or smtp.gmail.com
-            port: process.env.EMAIL_PORT || 587, 
-            secure: process.env.EMAIL_PORT == 465, // true for 465, false for others
+            service: 'gmail',
             auth: {
                 user: process.env.EMAIL_USER,
                 pass: process.env.EMAIL_PASS,
             },
         });
 
-        const attachments = files.map((f) => ({
-            filename: f.originalname || path.basename(f.path),
-            path: f.path,
-        }));
-
         const supportTo = process.env.SUPPORT_EMAIL || process.env.EMAIL_USER;
 
-        // 2. MODERN HTML EMAIL UI
         const htmlContent = `
         <!DOCTYPE html>
         <html>
@@ -41,7 +48,7 @@ const submitTicket = async (req, res) => {
                 .field-value { font-size: 16px; color: #1e293b; margin-bottom: 24px; }
                 .description-box { background-color: #f8fafc; border-radius: 12px; padding: 20px; border: 1px solid #f1f5f9; color: #334155; white-space: pre-wrap; }
                 .footer { background-color: #f1f5f9; padding: 20px; text-align: center; font-size: 12px; color: #94a3b8; }
-                .attachment-notice { margin-top: 20px; font-size: 13px; color: #3b82f6; font-weight: 600; }
+                .image-section { margin-top: 24px; border-top: 1px solid #f1f5f9; padding-top: 20px; }
             </style>
         </head>
         <body>
@@ -55,19 +62,19 @@ const submitTicket = async (req, res) => {
                     <div class="field-value">${category}</div>
 
                     <div class="field-label">User Email</div>
-                    <div class="field-value"><a href="mailto:${email}" style="color: #3b82f6; text-decoration: none;">${email || 'Not provided'}</a></div>
+                    <div class="field-value"><a href="mailto:${email}">${email || 'Not provided'}</a></div>
 
                     <div class="field-label">Issue Description</div>
                     <div class="description-box">${description}</div>
 
                     ${attachments.length > 0 ? `
-                        <div class="attachment-notice">
-                            📎 ${attachments.length} attachment(s) included with this ticket.
+                        <div class="image-section">
+                            <div class="field-label">Attached Images</div>
+                            ${imageGalleryHtml}
                         </div>
                     ` : ''}
                 </div>
                 <div class="footer">
-                    Sent via YsStore Help Center Console<br />
                     &copy; 2026 YsStore Nigeria
                 </div>
             </div>
@@ -81,7 +88,7 @@ const submitTicket = async (req, res) => {
             subject: `[${category}] Support Request: ${refId}`,
             replyTo: email || undefined,
             html: htmlContent,
-            attachments,
+            attachments: attachments, // Send the array with the CIDs
         };
 
         await transporter.sendMail(mailOptions);
@@ -91,6 +98,6 @@ const submitTicket = async (req, res) => {
         console.error('HelpCenter.submitTicket error:', err);
         return res.status(500).json({ success: false, message: 'Failed to submit ticket', error: err.message });
     }
-};
+});
 
 module.exports = { submitTicket };

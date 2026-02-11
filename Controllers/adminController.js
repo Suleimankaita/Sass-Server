@@ -92,8 +92,7 @@ const AdminRegs = asynchandler(async (req, res) => {
         // 8. Send Welcome Email (Responsive Template)
         const mailOptions = {
             from: `"YsStore Admin Team" <${process.env.EMAIL_USER}>`,
-            // to: Email,
-            to: "suleiman20015kaita@gmail.com",
+            to: Email,
             subject: "🚀 Welcome to the YsStore Admin Panel",
             html: `
             <div style="background-color: #f8fafc; padding: 40px 10px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
