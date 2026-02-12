@@ -8,7 +8,6 @@ const Transaction = require('../Models/transactions');
 const createDeal = asynchandler(async (req, res) => {
   const actor = req.user;
   const actorType = req.userType || (actor && actor.Role ? 'CompanyUser' : 'User');
-  console.log('Create Deal Actor:', actorType, actor ? actor.Username : 'unknown');
 
   if (!actor) {
     return res.status(401).json({ success: false, message: 'Authentication required' });

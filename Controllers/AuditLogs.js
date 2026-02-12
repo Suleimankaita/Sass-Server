@@ -101,7 +101,6 @@ const getActivities = async (req, res) => {
         .lean(),
       UserActivity.countDocuments(filter)
     ]);
-    console.log(activities)
 
     // Transform data to match React component structure
     const transformedActivities = activities.map(activity => ({

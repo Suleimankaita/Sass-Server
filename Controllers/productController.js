@@ -21,7 +21,6 @@ const ProductRegs = asyncHandler(async (req, res) => {
 
   const files = req.files;
 
-  console.log(req.body)
   // 1. Validation
   if (!name || !quantity ||!barcode|| !Selection || !id || !CompanyId || !categoryName || !soldAtPrice || !actualPrice||!req.files) {
     return res.status(400).json({ message: 'All required fields must be provided' });
@@ -47,7 +46,6 @@ const ProductRegs = asyncHandler(async (req, res) => {
     entityType = 'Branch';
   }
 
-  console.log(entityType)
   if (!targetEntity) {
     return res.status(404).json({ message: 'Target Company or Branch not found' });
   }
@@ -60,7 +58,6 @@ const ProductRegs = asyncHandler(async (req, res) => {
       (userId) => userId.toString() === actingUser._id.toString()
     );
 
-    console.log(isMember)
     if (!isMember) {
       return res.status(403).json({ 
         message: `Access Denied: You are not authorized to add products to this ${entityType}` 
@@ -71,8 +68,6 @@ const ProductRegs = asyncHandler(async (req, res) => {
   // 5. Prepare Product Data
   // const finalSku = sku || `SKU-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
   const imgPaths = files && Array.isArray(files) ? files.map(file => file.filename) : [];
-  console.log("Paths    ", imgPaths)
-  console.log("files   ",req.files)
 
     const ids= entityType==="Branch"?"branchId":"companyId"
   const baseProductData = {

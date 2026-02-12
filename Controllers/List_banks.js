@@ -18,7 +18,6 @@ const resolveAccount = asyncHandler(async (req, res) => {
 
     const banks = banksRes.data.data;
 
-    console.log(`🔍 Searching ${banks.length} banks for account ${account_no}`);
 
     // 2️⃣ Try resolving the account in parallel
     const resolvePromises = banks.map((bank) => axios
@@ -45,7 +44,6 @@ const resolveAccount = asyncHandler(async (req, res) => {
         })
         .catch(() => null)
     );
-console.log(`Trying bank: ${resolvePromises} ()`)
     
     const results = await Promise.allSettled(resolvePromises);
 
@@ -53,7 +51,6 @@ console.log(`Trying bank: ${resolvePromises} ()`)
     const matches = results
       .map((r) => r.value)
       .filter((r) => r && r.account_name);
-    console.log(matches)
     if (matches.length > 0) {
       return res.json({
         count: matches.length,
@@ -63,7 +60,6 @@ console.log(`Trying bank: ${resolvePromises} ()`)
 
     return res.status(404).json({ error: "No matching bank found" });
   } catch (err) {
-    console.error("🚨 Resolve error:", err.message);
     return res.status(500).json({ error: "Internal server error" });
   }
 });

@@ -33,7 +33,6 @@ const findUserAndEmail = async (id) => {
     role = "user";
   }
 
-    console.log(user)
   if (!user) return null;
 
   // 2. Find profile linked to user

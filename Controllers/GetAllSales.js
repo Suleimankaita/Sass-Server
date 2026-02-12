@@ -72,7 +72,6 @@ const GetFilteredSales = asyncHandler(async (req, res) => {
                 }
             })
             .lean();
-            console.log(334444 ,resultData)
         if (!resultData) {
             return res.status(404).json({ success: false, message: "Branch not found" });
         }

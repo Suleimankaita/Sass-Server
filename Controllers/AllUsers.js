@@ -372,7 +372,6 @@ const updateUserRole = async (req, res) => {
     try {
         const { id } = req.params;
         const { Role } = req.body;
-        console.log(req.body)
         if (!Role) {
             return res.status(400).json({
                 success: false,

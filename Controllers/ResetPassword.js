@@ -137,7 +137,6 @@ const requestOTP = asyncHandler(async (req, res) => {
 const resetPassword = asyncHandler(async (req, res) => {
     const { Email, otp, newPassword } = req.body;
 
-    console.log(req.body)
     if (!Email || !otp || !newPassword) {
         return res.status(400).json({ message: "All fields are required." });
     }

@@ -13,7 +13,6 @@ const RegisterStaff = asyncHandler(async (req, res) => {
         targetId // No more 'type' required
     } = req.body;
     
-    console.log(req.body)
     const userId = req.userId;
 
     // 1. Validation
@@ -77,7 +76,6 @@ const RegisterStaff = asyncHandler(async (req, res) => {
         _id: targetId
         });
 
-        console.log(branchOwnedByAdmin)
 
         if (branchOwnedByAdmin) {
             parentDocument = await Branch.findById(targetId);
@@ -115,7 +113,6 @@ const RegisterStaff = asyncHandler(async (req, res) => {
         Address: { StreetName, PostalNumber, Lat, Long },
     });
 
-    console.log(parentType)
     // if(parentType==='branch'){
     // }
     try {

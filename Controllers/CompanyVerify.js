@@ -12,7 +12,6 @@ const CompanyVerify=asyncHandler(async(req,res)=>{
         if(!found)return res.status(401).json({'message':`Company Not found `})
                 found.Verified=verify
         await found.save()
-        console.log(found)
         res.status(201).json(found)
 
     }catch(err){

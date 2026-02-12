@@ -10,7 +10,6 @@ const asyncHandler = require('express-async-handler');
 const DeleteCategory = asyncHandler(async (req, res) => {
     const { id, targetCompanyId, categoryId, CompanyName } = req.body;
 
-    console.log(req.body)
     // 1. Validation
     if (!id || !targetCompanyId || !categoryId) {
         return res.status(400).json({ message: 'User ID, Target Company ID, and Category ID are required' });

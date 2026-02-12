@@ -54,7 +54,6 @@ const notificationScheduler = () => {
 
       if (dueNotifications.length === 0) return;
 
-      console.log(`[Scheduler] Processing ${dueNotifications.length} notifications...`);
 
       for (const notif of dueNotifications) {
         // 2. Get Targets

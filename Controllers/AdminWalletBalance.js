@@ -7,7 +7,6 @@ const asyncHandler = require('express-async-handler');
 const GetBalance = asyncHandler(async (req, res) => {
     const id = req.userId;
     const role = req.role;
-    console.log(role)
     // 1. Validation
     if(!id)return res.status(403).json({'message':'All field required'})
     // 2. Permission Check (Fixed logic)
@@ -18,7 +17,6 @@ const GetBalance = asyncHandler(async (req, res) => {
 
     // 3. Fetch Data (Finding either Company or Branch)
     const found = await Admin.findById(id) 
-                  console.log(found)
 
     if (!found) {
         return res.status(404).json({ message: 'Company or Branch not found' });

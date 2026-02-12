@@ -10,14 +10,12 @@ const asyncHandler = require('express-async-handler');
 const UpdateCategories = asyncHandler(async (req, res) => {
     const { name, id, targetCompanyId, CompanyName, categoryId } = req.body;
 
-    console.log(req.body)
     // 1. Basic Validation
     if (!name || !id || !targetCompanyId || !CompanyName || !categoryId) {
         return res.status(400).json({ message: 'Missing required fields' });
     }
 
     // DEBUG: Check what is actually arriving
-    console.log(`Searching for Entity ID: "${targetCompanyId}"`);
 
     // 2. Ensure targetCompanyId is a valid ObjectId before querying
     // If you pass a slug by mistake, findById will fail or return null
@@ -33,7 +31,6 @@ const UpdateCategories = asyncHandler(async (req, res) => {
     let entityLabel = 'Company';
 
     if (!targetEntity) {
-        console.log("Not found in Company collection, checking Branch...");
         targetEntity = await Branch.findById(targetCompanyId).populate('CategoriesId').exec();
         entityLabel = 'Branch';
     }
@@ -43,7 +40,6 @@ const UpdateCategories = asyncHandler(async (req, res) => {
         const rawCheck = await mongoose.connection.db.collection('companies').findOne({ _id: new mongoose.Types.ObjectId(targetCompanyId) }) 
                         || await mongoose.connection.db.collection('branches').findOne({ _id: new mongoose.Types.ObjectId(targetCompanyId) });
         
-        console.log("Raw Database Check result:", rawCheck ? "Found in DB but Model failed" : "Not found in DB at all");
         
         return res.status(404).json({ message: 'Target Company or Branch not found in database' });
     }

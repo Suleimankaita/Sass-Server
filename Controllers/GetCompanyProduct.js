@@ -58,7 +58,6 @@ const GetCompanyProduct = asyncHandler(async (req, res) => {
 
     if (targetCompany.POSProductsId) {
 
-      console.log("prod  ",targetCompany.POSProductsId)
       targetCompany.POSProductsId.forEach((prod) => {
 
         if (prod && prod.sku) {

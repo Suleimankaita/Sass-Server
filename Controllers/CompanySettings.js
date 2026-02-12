@@ -99,7 +99,6 @@ const UpdateSettings = asyncHandler(async (req, res) => {
     ...updateData
   } = settingsData;
   
-  console.log(branchId  , companyId)
  const comfound =
   (await Company.findById(companyId?.toString())) ||
   (await Branch.findById(branchId?.toString()));
@@ -130,7 +129,6 @@ if (settingsData?.businessName) {
 
 await comfound.save();
 
-  console.log(updateData);
 
   if (req.files?.companyLogo?.[0]) {
     updateData.companyLogo = req.files.companyLogo[0].filename;

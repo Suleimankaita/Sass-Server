@@ -6,7 +6,6 @@ const GetBalance = asyncHandler(async (req, res) => {
     const id = req.userId;
     const { companyId } = req.query;
     const role = req.role;
-    console.log(role)
     // 1. Validation
     if (!id || !companyId) {
         return res.status(400).json({ message: 'UserId and CompanyId are required' });
@@ -22,7 +21,6 @@ const GetBalance = asyncHandler(async (req, res) => {
     const found = await Company.findById(companyId).populate('Orders') || 
                   await Branch.findById(companyId).populate('Orders');
 
-                  console.log(found)
 
     if (!found) {
         return res.status(404).json({ message: 'Company or Branch not found' });

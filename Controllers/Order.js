@@ -95,8 +95,7 @@ const createOrder = asyncHandler(async (req, res) => {
 // 2. Combine results
 const foundProducts = [...regularProducts, ...dealProducts];
 
-    console.log( companyId, 
-        branchId, )
+    
     
     // console.log(foundProducts)
     // 2. Validate quantities
@@ -105,7 +104,6 @@ const foundProducts = [...regularProducts, ...dealProducts];
         const dbProduct = foundProducts.find(
             (p) => p._id.toString() === item.productId.toString()
         );
-console.log(dbProduct)
         if (!dbProduct) {
             return res.status(404).json({ 
                 message: `Product with ID ${item.productId} not found.` 
@@ -287,7 +285,6 @@ console.log(dbProduct)
                 }]
             });
         } catch (err) {
-            console.error("Mail Delivery Error:", err);
         }
     };
 
@@ -491,7 +488,6 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
 // Debug helper: create a minimal order and report DB state
 const createOrderDebug = asyncHandler(async (req, res) => {
     try {
-        console.log('createOrderDebug: mongoose state=', mongoose.connection.readyState);
         const payload = {
             orderId: generateOrderId(),
             Username: 'DEBUG_' + Date.now(),
@@ -502,7 +498,6 @@ const createOrderDebug = asyncHandler(async (req, res) => {
             total: 1,
         };
         const created = await Order.create(payload);
-        console.log('createOrderDebug created id=', created._id.toString());
         return res.status(201).json({ success: true, data: created, mongooseState: mongoose.connection.readyState });
     } catch (err) {
         console.error('createOrderDebug error:', err);

@@ -9,7 +9,6 @@ const asyncHandler = require('express-async-handler');
 const AddCategories = asyncHandler(async (req, res) => {
     const { name, id, targetCompanyId, CompanyName } = req.body;
 
-    console.log(req.body)
     if (!name || !id || !targetCompanyId ) {
         return res.status(400).json({ message: 'Missing required fields' });
     }

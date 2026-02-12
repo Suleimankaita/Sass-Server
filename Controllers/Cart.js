@@ -42,7 +42,6 @@ const addToCart = asyncHandler(async (req, res) => {
         price,
         discount = 0
     } = req.body;
-    console.log("Add to cart request body:", req.body);
     if (!productId && !dealId) return res.status(400).json({ message: "productId or dealId is required" });
 
     const qty = Math.max(1, parseInt(quantity, 10) || 1);
@@ -63,7 +62,6 @@ const addToCart = asyncHandler(async (req, res) => {
         cartItem.discount = discount !== undefined ? discount : cartItem.discount;
         await cartItem.save();
     } else {
-      console.log(img)
         // Create new cart item
         cartItem = new UserDeal({
             userId: effectiveUserId,

@@ -8,16 +8,11 @@ const path = require('path');
 const fs = require('fs');
 
 const UpdateProfile = asyncHandler(async (req, res) => {
-    console.log('=== UPDATE PROFILE STARTED ===');
-    console.log('Request userId:', req.userId);
-    console.log('Request body:', req.body);
-    console.log('Request file:', req.file);
-
+  
     const id = req.userId; 
     const updates = req.body;
 
     if (!id) {
-        console.log('ERROR: UserId is required');
         return res.status(400).json({ "message": "UserId required" });
     }
 

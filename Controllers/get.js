@@ -30,7 +30,6 @@ const getAdminById = asyncHandler(async (req, res) => {
       .populate('ProductsId')
       .populate('UserLogId')
       .lean();
-        console.log(admin)
     if (!admin) return res.status(404).json({ message: 'Admin not found' });
 
     res.status(200).json(admin);

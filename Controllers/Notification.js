@@ -62,23 +62,19 @@ exports.create = async (req, res, next) => {
     } else {
       if (targets.includes("Ecommerce Users")) {
         const users = await User.find().select("UserProfileId").exec();
-        console.log("Users ", users)
         queryFilters.push(...users);
       }
       if (targets.includes("POS Admins")) {
         const admins = await Admin.find({ Role: "Admin", }).select("UserProfileId").exec();
-        console.log("Admin ", admins)
         queryFilters.push(...admins);
       }
       if (targets.includes("POS Users")) {
         const cus = await CompanyUsers.find().select("UserProfileId").exec();
-        console.log("companyUser ", cus)
         
         queryFilters.push(...cus);
       }
     }
 
-    console.log(queryFilters)
     // Extract just the ObjectIds of the UserProfiles
     const profileIds = [...new Set(queryFilters
       .map(item => item.UserProfileId)
@@ -87,7 +83,6 @@ exports.create = async (req, res, next) => {
 
 
     /* ---------------- BULK DATABASE UPDATE ---------------- */
-    console.log(profileIds)
     if (profileIds.length > 0) {
       // 🔥 The Fix: Use updateMany with $addToSet 
       // This pushes the notification ID into the NotificationId array for all users at once

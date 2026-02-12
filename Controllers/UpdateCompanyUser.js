@@ -30,7 +30,6 @@ const updateCompanyUser = asyncHandler(async (req, res) => {
         phone,
         CompanyName
     } = req.body;
-    console.log(req.file);
     // 2. Update CompanyUser fields
     user.Firstname = Firstname || user.Firstname;
     user.Lastname = Lastname || user.Lastname;

@@ -11,7 +11,6 @@ const Branch = require("../Models/Branch");
 
 // 🔁 Role → Model resolver
 const resolveAccount = async (role, id) => {
-    console.log(23 ,role ,id)
   switch (role) {
     case "Partner":
       return Admin.findById(id).populate('companyId').populate("UserProfileId").select("+refreshToken Active Verified ");
@@ -50,10 +49,8 @@ exports.refreshToken = asyncHandler(async (req, res) => {
   
   const { id, Role, companyId,Username,companyName } = payload?.UserInfo;
   
-  console.log(refreshToken)
   // 🔍 Resolve account dynamically
   const account = await resolveAccount(Role, id);
-  console.log(account)
 
   if (!account) {
     return res.status(401).json({ message: "Account not found" });

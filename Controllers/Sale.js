@@ -27,7 +27,6 @@ const ProcessSale = asyncHandler(async (req, res) => {
             img,
             TransactionType
         } = req.body;
-        console.log(req.body)
 
         if (!img||!sellerId || !actorId || !productId || !quantity || !soldAtPrice||!TransactionType) {
             return res.status(400).json({ message: "Missing required sale data." });
@@ -36,7 +35,6 @@ const ProcessSale = asyncHandler(async (req, res) => {
         /* 1. IDENTIFY SELLER & ACTOR */
         let seller = await Branch.findById(sellerId) || await Company.findById(sellerId);
         let sellerType = (await Branch.exists({ _id: sellerId })) ? 'Branch' : 'Company';
-        console.log(sellerType)
         let actor = await Admin.findById(actorId).populate('UserProfileId') || await User.findById(actorId).populate('UserProfileId')||await ecomUser.findById(actorId).populate('UserProfileId');
         let actorType = (await Admin.exists({ _id: actorId })) ? 'Admin' : 'User';
 

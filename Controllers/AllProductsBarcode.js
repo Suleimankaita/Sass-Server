@@ -11,7 +11,6 @@ const AllBracodeGetproducts = (io) => {
     try {
       // 1. Removed page and limit from arguments
       socket.on("GetIdss", async ({ id }) => {
-        console.log("mans Fetching for Company ID Or Branch:", id);
 
         if (!id) return socket.emit("Error", { message: "Company ID is required" });
 

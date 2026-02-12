@@ -9,7 +9,6 @@ const GetBranchproducts = (io) => {
   io.on('connection', (socket) => {
     try {
       socket.on("GetBranchId", async ({ id, page = 1, limit = 5 }) => {
-        console.log("Fetching for Branch ID:", id);
 
         if (!id) return socket.emit("Error", { message: "Branch ID is required" });
 

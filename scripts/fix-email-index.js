@@ -1,13 +1,12 @@
 const mongoose = require('mongoose');
 
-const uri = process.env.MONGO_URI || 'mongodb://localhost:27017/test';
+const uri = process.env.URI 
 
 async function main() {
   await mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true });
   const db = mongoose.connection;
   const collName = 'ys_store_users';
   const coll = db.collection(collName);
-
   console.log('Connected to', uri);
 
   const indexes = await coll.indexes();

@@ -210,9 +210,9 @@ io.on("connection", (socket) => {
   socket.on("join_admin_pool", () => {
     socket.join("super_admins");
   });
-    socket.on('loc',(coords)=>{
-      console.log(coords)
-    })
+    // socket.on('loc',(coords)=>{
+    //   console.log(coords)
+    // })
     
     initCustomerCare(io);
     // setInterval(() => {

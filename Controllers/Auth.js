@@ -121,7 +121,6 @@ const Auth = asynchandler(async (req, res) => {
                 id: found._id,
             },
         };
-        console.log('jdbuvidbuosbvdeu')
 
         const accessToken = Jwt.sign(payload, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '15m' });
         const refreshToken = Jwt.sign(payload, process.env.REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
