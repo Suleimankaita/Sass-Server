@@ -10,7 +10,9 @@ const allowedOrigins = [
   "https://172.20.10.2:5173/",
   "www.ysstore.com",
   "https://www.ysstore.com",
+  "http://www.ysstore.com",
   "https://ysstore.com",
+  "http://ysstore.com",
   
   'https://your-production-domain.com'
 ];
