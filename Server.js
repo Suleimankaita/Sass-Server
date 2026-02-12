@@ -125,12 +125,9 @@ const allowedOrigins = [
      'http://172.20.10.3:5173',
   'http://127.0.0.1:5173',
   "https://172.20.10.2:5173/",
-  'https://your-production-domain.com',
-  "www.ysstore.com",
-  "https://www.ysstore.com",
-  "http://www.ysstore.com",
-  "https://ysstore.com",
-  "http://ysstore.com",
+  "www.ysstoreapp.com",
+  "https://www.ysstoreapp.com",
+  "https://ysstoreapp.com",
 ];
 
 
@@ -235,7 +232,9 @@ io.on("connection", (socket) => {
 /**
  * 4. STATIC FILES & MULTER
  */
-app.use(express.static(path.join(__dirname, "Public"), { maxAge: '1d' }));
+app.use(express.static(path.join(__dirname, "Public"), 
+// { maxAge: '1d' }
+));
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, path.join(__dirname, "Public/img")),
@@ -244,7 +243,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
     storage,
-    limits: { fileSize: 50 * 1024 * 1024 },
+    // limits: { fileSize: 50 * 1024 * 1024 },
 });
 
 /**
