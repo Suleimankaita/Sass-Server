@@ -64,7 +64,7 @@ const mailOptions = {
     to: found.UserProfileId.Email,
       attachments: [{
                     filename: 'YSStore.png',
-                    path: 'https://api.ysstoreapp.com/img/YSStore.png', // Ensure this is a valid local path or URL
+                    path: 'https://api.ysstoreapp.com/img/ys.png', // Ensure this is a valid local path or URL
                     cid: 'ysstorelogo'
                 }],
     subject: `🚨 Security Alert: Admin Login for ${found.companyId?.CompanyName || 'System'}`,

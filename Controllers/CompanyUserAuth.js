@@ -82,7 +82,7 @@ const CompanyAuth = asynchandler(async (req, res) => {
         to: found.UserProfileId.Email,
          attachments: [{
                     filename: 'YSStore.png',
-                    path: 'https://api.ysstoreapp.com/img/YSStore.png', // Ensure this is a valid local path or URL
+                    path: 'https://api.ysstoreapp.com/img/ys.png', // Ensure this is a valid local path or URL
                     cid: 'ysstorelogo'
                 }],
         subject: `⚠️ Login Alert: ${found.Role} Access Detected`,

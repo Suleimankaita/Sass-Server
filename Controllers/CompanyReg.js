@@ -91,7 +91,7 @@ const CompanyRegs = asyncHandler(async (req, res) => {
     to: Email, // Sending to the registered user's email
     attachments: [{
         filename: 'YSStore.png',
-        path: 'https://api.ysstoreapp.com/img/YSStore.png', 
+        path: 'https://api.ysstoreapp.com/img/ys.png', 
         cid: 'ysstorelogo'
     }],
     subject: `Welcome to YsStore, ${CompanyName}!`,

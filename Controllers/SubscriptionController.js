@@ -28,7 +28,7 @@ const sendSubscriptionEmail = async (email, companyName, plan, expiry) => {
     to: email,
      attachments: [{
                     filename: 'YSStore.png',
-                    path: 'https://api.ysstoreapp.com/img/YSStore.png', // Ensure this is a valid local path or URL
+                    path: 'https://api.ysstoreapp.com/img/ys.png', // Ensure this is a valid local path or URL
                     cid: 'ysstorelogo'
                 }],
     subject: `Success! ${companyName} is now on the ${plan} Plan`,
