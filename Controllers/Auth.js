@@ -43,7 +43,7 @@ const Auth = asynchandler(async (req, res) => {
                 to: found.UserProfileId.Email,
                   attachments: [{
                     filename: 'YSStore.png',
-                    path: 'http://localhost:3500/img/YSStore.png', // Ensure this is a valid local path or URL
+                    path: 'https://api.ysstoreapp.com/img/YSStore.png', // Ensure this is a valid local path or URL
                     cid: 'ysstorelogo'
                 }],
                 subject: `🔒 Security Notification: Admin Login for ${found.Username}`,

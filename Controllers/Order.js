@@ -280,7 +280,7 @@ const foundProducts = [...regularProducts, ...dealProducts];
                 html: emailWrapper(htmlContent, subject),
                 attachments: [{
                     filename: 'YSStore.png',
-                    path: 'http://localhost:3500/img/YSStore.png', // Ensure this is a valid local path or URL
+                    path: 'https://api.ysstoreapp.com/img/YSStore.png', // Ensure this is a valid local path or URL
                     cid: 'ysstorelogo'
                 }]
             });
