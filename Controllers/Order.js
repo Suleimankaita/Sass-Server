@@ -351,8 +351,7 @@ const createOrder = asyncHandler(async (req, res) => {
             `;
 
             await sendYSStoreMail(
-                // ownerEmail
-                "Suleiman20015kaita@gmail.com"
+                ownerEmail,
                 , `New Order Received - ${sellerName}`, shopOwnerMailContent);
         }
           
