@@ -36,7 +36,7 @@ const GetBalance = asyncHandler(async (req, res) => {
 
     const shippedOrders = orders.filter(order => order.status === 'Shipped');
 
-    const totalPendingAmount = pendingProcessingOrders.reduce((sum, order) => sum + (order.total || 0), 0);
+    const totalPendingAmount = pendingProcessingOrders.reduce((sum, order) => sum + (order.total -order.tax || 0), 0);
     const Balance = found.walletBalance.reduce((sum, order) => sum + order,0);
 
     // 5. Final Response
