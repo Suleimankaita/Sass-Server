@@ -1,6 +1,9 @@
 const allowedOrigins = [
   'http://localhost:5173',
-  'https://localhost:5173',
+	'https://ysstoreapp.com',
+'ysstore-9ab086ton-suleimankaitas-projects.vercel.app',
+	'https://www.ysstoreapp.com',
+ 'https://localhost:5173',
   'http://127.0.0.1:5173',
   "http://172.20.10.2:5173",
   "http://172.20.10.3:5173",
@@ -9,11 +12,8 @@ const allowedOrigins = [
    "http://172.20.10.11:5173/",
   "https://172.20.10.2:5173/",
   "www.ysstore.com",
-  "https://www.ysstore.com",
-  "http://www.ysstore.com",
-  "https://ysstore.com",
-  "http://ysstore.com",
-  
+ 
+"https://ysstore-jbvmjt2bg-suleimankaitas-projects.vercel.app/",
   'https://your-production-domain.com'
 ];
 

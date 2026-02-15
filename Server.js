@@ -116,21 +116,18 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(morgan(IS_PRODUCTION ? "combined" : "dev"));
-
+app.use(morgan(IS_PRODUCTION ? "combined" : "dev"))
 const allowedOrigins = [
-     'http://localhost:5173',
-  "http://172.20.10.6:3500",
-     'http://172.20.10.2:5173',
-     'http://172.20.10.3:5173',
+  'http://localhost:5173',
+  'http://172.20.10.6:3500',
+  'http://172.20.10.2:5173',
+  'http://172.20.10.3:5173',
   'http://127.0.0.1:5173',
-  "https://172.20.10.2:5173/",
-  'https://your-production-domain.com',
-  "www.ysstore.com",
-  "https://www.ysstore.com",
-  "http://www.ysstore.com",
-  "https://ysstore.com",
-  "http://ysstore.com",
+  'https://172.20.10.2:5173',
+  'https://www.ysstore.com',
+  'https://ysstore.com',
+  
+  'https://vercel.com' // if your frontend is on Vercel
 ];
 
 
@@ -144,9 +141,10 @@ app.use((req, res, next) => {
     return res.sendStatus(200);
   }
   next();
+
 });
 
-app.use(express.json({ limit: "50mb" }));
+app.use(express.json({ limit: "500mb" }));
 app.use(express.urlencoded({ extended: true })); // Changed to true for nested objects
 app.use(cookieParser());
 app.use(compression());
@@ -185,7 +183,7 @@ app.use("/api", limiter);
  */
 const io = new Server(httpServer, {
     cors: {
-        origin: allowedOrigins,
+        origin:'*',
         methods: ["GET", "POST"],
         credentials: true
     },
@@ -244,7 +242,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
     storage,
-    limits: { fileSize: 50 * 1024 * 1024 },
+    limits: { fileSize: 500 * 1024 * 1024 },
 });
 
 /**
