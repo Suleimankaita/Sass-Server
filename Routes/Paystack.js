@@ -1,5 +1,5 @@
 const router = require("express").Router();
-const { createOrderWithPaystack } = require("../controllers/paystack");
+const { createOrderWithPaystack } = require("../Controllers/paystack");
 
 router.post("/", createOrderWithPaystack);
 

@@ -148,7 +148,7 @@ const foundProducts = [...regularProducts, ...dealProducts];
 
         const price = Number(it.soldAtPrice) || 0;
         const quantity = Number(it.quantity || it.qty||dbProduct.unitsLeft) || 0;
-        
+        console.log(price)
         vendorGroups[groupKey].items.push({
             productId: it.productId || null,
             ProductName: it.ProductName || '',
@@ -173,9 +173,177 @@ const foundProducts = [...regularProducts, ...dealProducts];
 
     const numberOfVendors = Object.keys(vendorGroups).length; // Now represents number of individual Orders
 
+    const transporter = nodemailer.createTransport({
+        service: 'gmail', 
+        auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
+    });
+
+    const sendYSStoreMail = async (to, subject, htmlContent) => {
+        try {
+            await transporter.sendMail({
+             from: `"YSStore Logistics" <${process.env.EMAIL_USER}>`,
+                to,
+                subject,
+                html: emailWrapper(htmlContent, subject),
+                attachments: [{
+                    filename: 'YSStore.png',
+                    path: 'https://api.ysstoreapp.com/img/ys.png', // Ensure this is a valid local path or URL
+                    cid: 'ysstorelogo'
+                }]
+            });
+        } catch (err) {
+        }
+
     for (const key in vendorGroups) {
         const group = vendorGroups[key];
-        
+
+        // --- Inside the "for (const key in vendorGroups)" loop ---
+
+        let targetAdmin = null;
+        let sellerName = "";
+
+// 1. Identify the Admin
+if (group.branchId && group.branchId !== "null") {
+    // If it's a branch, find the Company first to get the ID needed for the Admin lookup
+    const companyWithBranch = await Company.findOne({ BranchId: group.branchId }).lean();
+    if (companyWithBranch) {
+        // Use the ownerId or the companyId to find the Admin
+        targetAdmin = await Admin.findById(companyWithBranch.ownerId).populate("UserProfileId");
+        sellerName = `${companyWithBranch.CompanyName} (Branch)`;
+    }
+} else {
+    // Direct Company lookup: Find Admin using the companyId provided in the request
+    targetAdmin = await Admin.findById(group.companyId).populate("UserProfileId");
+    
+    // We also fetch the company name for the email branding
+    const comp = await Company.findById(group.companyId).lean();
+    sellerName = comp?.CompanyName || "Your Store";
+}
+
+// 2. Send the Mail to the Found Admin
+if (targetAdmin && targetAdmin.Email) {
+    const ownerEmail = targetAdmin.Email;
+    const ownerName = targetAdmin.Username || "Admin";
+
+    const shopOwnerMailContent = `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden;">
+            <div style="background-color: #2563eb; color: #ffffff; padding: 30px; text-align: center;">
+                <p style="text-transform: uppercase; font-size: 11px; letter-spacing: 2px; margin: 0 0 10px 0; opacity: 0.8;">New Order Notification</p>
+                <h1 style="margin: 0; font-size: 24px;">Order Received for ${sellerName}</h1>
+            </div>
+
+            <div style="padding: 30px;">
+                <p style="font-size: 16px; color: #1e293b;">Hello <strong>${ownerName}</strong>,</p>
+                <p style="color: #64748b;">A customer (<strong>${Username}</strong>) has placed a new order. Here is the breakdown:</p>
+
+                <table style="width: 100%; border-collapse: collapse; margin-top: 25px;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid #f1f5f9; text-align: left; color: #94a3b8; font-size: 12px;">
+                            <th style="padding-bottom: 10px;">PRODUCT</th>
+                            <th style="padding-bottom: 10px; text-align: center;">QTY</th>
+                            <th style="padding-bottom: 10px; text-align: right;">PRICE</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${group.items.map(it => `
+                            <tr style="border-bottom: 1px solid #f8fafc;">
+                                <td style="padding: 15px 0;">
+                                    <div style="font-weight: 700; color: #1e293b;">${it.ProductName}</div>
+                                    <div style="font-size: 11px; color: #94a3b8;">SKU: ${it.sku || 'N/A'}</div>
+                                </td>
+                                <td style="padding: 15px 0; text-align: center; color: #1e293b; font-weight: 600;">${it.quantity}</td>
+                                <td style="padding: 15px 0; text-align: right; color: #1e293b; font-weight: 700;">
+                                    $${(it.quantity * it.Price).toFixed(2)}
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+
+                <div style="margin-top: 30px; padding: 20px; background-color: #f8fafc; border-radius: 12px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; color: #64748b;">
+                        <span>Subtotal</span>
+                        <span>$${group.subtotal.toFixed(2)}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: 900; color: #2563eb; margin-top: 10px; border-top: 1px solid #e2e8f0; padding-top: 10px;">
+                        <span>Net Earnings</span>
+                        <span>$${group.subtotal.toFixed(2)}</span>
+                    </div>
+                </div>
+
+                <div style="margin-top: 30px; text-align: center;">
+                    <a href="https://ysstoreapp.com/dashboard/orders/${ownerName}.YsStore/${orderForVendor._id}" 
+                       style="display: inline-block; background-color: #1e293b; color: #ffffff; padding: 14px 28px; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 14px;">
+                        View Order Dashboard
+                    </a>
+                </div>
+            </div>
+
+            <div style="background-color: #f1f5f9; padding: 20px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0;">
+                Order ID: /${orderForVendor.orderId} | Reference: ${paymentReference}
+            </div>
+        </div>
+    `;
+
+    await sendYSStoreMail(ownerEmail, `New Order Received - ${sellerName}`, shopOwnerMailContent);
+}
+      
+// --- Inside the "for (const key in vendorGroups)" loop ---
+
+// 1. Determine Identity (Branch vs Company)
+let recipientEmail;
+let displayName;
+let identityType;
+
+if (group.branchId && group.branchId !== "null") {
+    const targetBranch = await Branch.findById(group.branchId);
+    recipientEmail = targetBranch?.Email;
+    displayName = targetBranch?.BranchName || "Branch Manager";
+    identityType = "Branch";
+} else {
+    const targetCompany = await Company.findById(group.companyId).populate('CompanyUsers');
+    recipientEmail = targetCompany?.Email;
+    displayName = targetCompany?.CompanyName || "Company Admin";
+    identityType = "Company";
+}
+
+// 2. Send the Mail
+if (recipientEmail) {
+    const vendorMailContent = `
+        <div style="font-family: sans-serif; border: 1px solid #e2e8f0; padding: 20px; border-radius: 16px;">
+            <h2 style="color: #1e293b;">New Order for ${displayName} (${identityType})</h2>
+            <p>Order ID: <strong>#${orderForVendor.orderId}</strong></p>
+            <hr style="border: 0; border-top: 1px solid #f1f5f9;" />
+            
+            <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                <thead>
+                    <tr style="text-align: left; color: #64748b; font-size: 12px; text-transform: uppercase;">
+                        <th style="padding-bottom: 10px;">Item</th>
+                        <th style="padding-bottom: 10px;">Qty</th>
+                        <th style="padding-bottom: 10px;">Price</th>
+                        <th style="padding-bottom: 10px; text-align: right;">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${group.items.map(it => `
+                        <tr style="border-bottom: 1px solid #f8fafc;">
+                            <td style="padding: 12px 0; font-weight: bold; color: #334155;">${it.ProductName}</td>
+                            <td style="padding: 12px 0;">${it.quantity}</td>
+                            <td style="padding: 12px 0;">$${it.Price.toFixed(2)}</td>
+                            <td style="padding: 12px 0; text-align: right; font-weight: bold;">$${(it.quantity * it.Price).toFixed(2)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+
+            <div style="text-align: right; background: #f8fafc; padding: 15px; border-radius: 8px;">
+                <p style="margin: 0; color: #64748b;">Subtotal: <strong>$${group.subtotal.toFixed(2)}</strong></p>
+                <p style="margin: 5px 0 0 0; color: #2563eb; font-size: 18px;">Total to Process: <strong>$${(group.subtotal + groupShipping + groupTax).toFixed(2)}</strong></p>
+            </div>
+        </div>
+    `;
+    await sendYSStoreMail(recipientEmail, `New ${identityType} Order: ${orderForVendor.orderId}`, vendorMailContent);
+}
         // Calculate split tax/shipping for this specific order item
         const groupTax = tax / numberOfVendors;
         const groupShipping = shippingCost / numberOfVendors;
@@ -257,6 +425,89 @@ const foundProducts = [...regularProducts, ...dealProducts];
         }
     }
 
+    // --- 1. Pre-fetch Names for the Summary ---
+// This ensures the Admin email has the actual names of companies/branches
+const summaryDetails = await Promise.all(
+    Object.keys(vendorGroups).map(async (key) => {
+        const group = vendorGroups[key];
+        let displayName = "Unknown Vendor";
+        let type = "Company";
+
+        if (group.branchId && group.branchId !== "null") {
+            const b = await Branch.findById(group.branchId).lean();
+            displayName = b?.BranchName || "Unknown Branch";
+            type = "Branch";
+        } else {
+            const c = await Company.findById(group.companyId).lean();
+            displayName = c?.CompanyName || "Unknown Company";
+            type = "Company";
+        }
+
+        return { ...group, displayName, type };
+    })
+);
+
+// --- 2. Generate Admin Email Content ---
+const adminMailContent = `
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1e293b; max-width: 600px; margin: auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+        <div style="background-color: #0f172a; color: #ffffff; padding: 24px; text-align: center;">
+            <h2 style="margin: 0; font-size: 20px;">Global Transaction Summary</h2>
+            <p style="margin: 4px 0 0; opacity: 0.8; font-size: 14px;">Ref: ${paymentReference}</p>
+        </div>
+
+        <div style="padding: 24px;">
+            <p style="font-size: 14px; margin-bottom: 20px;">
+                Customer: <strong style="color: #0f172a;">${Username}</strong><br/>
+                Total Vendors Involved: <strong>${summaryDetails.length}</strong>
+            </p>
+
+            <h4 style="font-size: 12px; text-transform: uppercase; color: #64748b; letter-spacing: 0.05em; margin-bottom: 12px;">Breakdown by Vendor</h4>
+            
+            ${summaryDetails.map(vendor => `
+                <div style="background-color: #f8fafc; border: 1px solid #f1f5f9; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 8px;">
+                        <span style="font-weight: 800; font-size: 14px; color: #334155;">${vendor.type}: ${vendor.displayName}</span>
+                        <span style="font-weight: 800; color: #2563eb;">$${vendor.subtotal.toFixed(2)}</span>
+                    </div>
+                    <table style="width: 100%; font-size: 13px; border-spacing: 0;">
+                        ${vendor.items.map(it => `
+                            <tr>
+                                <td style="padding: 4px 0; color: #475569;">${it.ProductName}</td>
+                                <td style="padding: 4px 0; text-align: right; color: #94a3b8;">
+                                    ${it.quantity} x $${it.Price.toFixed(2)} = <strong>$${(it.quantity * it.Price).toFixed(2)}</strong>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </table>
+                </div>
+            `).join('')}
+
+            <div style="margin-top: 32px; background: #f0f9ff; padding: 20px; border-radius: 12px; border: 1px solid #bae6fd;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 15px;">
+                    <tr>
+                        <td style="padding: 8px 0; color: #0369a1;">Gross Platform Sales:</td>
+                        <td style="padding: 8px 0; text-align: right; font-weight: 900;">$${subtotal.toFixed(2)}</td>
+                    </tr>
+                    <tr style="border-top: 1px solid #e0f2fe;">
+                        <td style="padding: 8px 0; color: #166534;">Admin Revenue (80% Tax):</td>
+                        <td style="padding: 8px 0; text-align: right; color: #16a34a; font-weight: bold;">+$${totalAdminCommission.toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; color: #166534;">Partner Revenue (20% Tax):</td>
+                        <td style="padding: 8px 0; text-align: right; color: #16a34a; font-weight: bold;">+$${totalPartnerCommission.toFixed(2)}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        
+        <div style="background-color: #f1f5f9; padding: 16px; text-align: center; font-size: 12px; color: #94a3b8;">
+            This is an automated system notification for YSStore SuperAdmins.
+        </div>
+    </div>
+`;
+
+await sendYSStoreMail(process.env.ADMIN_EMAIL, `💰 Order Summary - ${Username}`, adminMailContent);
+
     if (user.UserProfileId) {
         updatePromises.push(UserProfile.findByIdAndUpdate(user.UserProfileId, {
             $push: { orders: { $each: createdOrderIds } }
@@ -266,26 +517,7 @@ const foundProducts = [...regularProducts, ...dealProducts];
     await Promise.all(updatePromises);
 
     // --- 4. Nodemailer Implementation ---
-    const transporter = nodemailer.createTransport({
-        service: 'gmail', 
-        auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
-    });
-
-    const sendYSStoreMail = async (to, subject, htmlContent) => {
-        try {
-            await transporter.sendMail({
-                from: '"YSStore Logistics" <noreply@ysstore.com>',
-                to,
-                subject,
-                html: emailWrapper(htmlContent, subject),
-                attachments: [{
-                    filename: 'YSStore.png',
-                    path: 'https://api.ysstoreapp.com/img/ys.png', // Ensure this is a valid local path or URL
-                    cid: 'ysstorelogo'
-                }]
-            });
-        } catch (err) {
-        }
+    
     };
 
     // Calculate Final Total Displayed to Customer
@@ -447,7 +679,7 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
 
     // 4️⃣ Credit Wallets ONLY for the owners of THIS specific sub-order
     if (isBecomingPaid) {
-      const amountToCredit = order.total || 0;
+      const amountToCredit = order.total-order.tax || 0;
 
       // Credit the Company (or companies) in this sub-order
       if (order.companyId && order.companyId.length > 0) {
