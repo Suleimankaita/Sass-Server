@@ -61,6 +61,28 @@ const PLAN_LIMITS = {
 /**
  * SUBSCRIBE COMPANY
  */
+
+const GetAllBilling = asynchandler(async (req, res) => {
+    try {
+        const transactions = await Billing.find()
+            .populate('companyId', 'CompanyName email') // Fetches specific company fields
+            .sort({ createdAt: -1 }); // Sort by newest first
+
+        res.status(200).json({
+            success: true,
+            count: transactions.length,
+            data: transactions
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Error fetching billing records",
+            error: error.message
+        });
+    }
+});
+
+
 const subscribeCompany = asynchandler(async (req, res) => {
   try {
     const { companyId } = req.params;
@@ -208,4 +230,5 @@ module.exports = {
   renewSubscription,
   cancelSubscription,
   PLAN_LIMITS,
+  GetAllBilling
 };
