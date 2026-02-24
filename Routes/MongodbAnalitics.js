@@ -5,27 +5,35 @@ const MongoUltimateAnalytics = require('../Models/MongoDbAnaltytics');
 
 router.get('/', async (req, res) => {
   try {
-    const admin = mongoose.connection.db.admin();
+    // 1. Ensure connection exists
+    if (!mongoose.connection.db) {
+      throw new Error("Database connection not established");
+    }
+
+    // 2. Explicitly target the 'admin' database for server metrics
+    // This is the key change for Atlas compatibility
+    const adminDb = mongoose.connection.client.db('admin');
     
-    // Run serverStatus for core metrics
-    const s = await admin.serverStatus();
+    // 3. Use .command() which is the most compatible way to call serverStatus
+    const s = await adminDb.command({ serverStatus: 1 });
 
     const data = {
       process: { uptime: s.uptime, version: s.version, pid: s.pid },
       memory: { 
-        resident: s.mem.resident, 
-        virtual: s.mem.virtual, 
-        page_faults: s.extra_info.page_faults 
+        resident: s.mem?.resident, 
+        virtual: s.mem?.virtual, 
+        page_faults: s.extra_info?.page_faults || 0
       },
       connections: {
-        current: s.connections.current,
-        available: s.connections.available,
-        active: s.connections.active,
-        totalCreated: s.connections.totalCreated,
-        rejected: s.connections.rejected || 0
+        current: s.connections?.current,
+        available: s.connections?.available,
+        active: s.connections?.active,
+        totalCreated: s.connections?.totalCreated,
+        rejected: s.connections?.rejected || 0
       },
       globalLock: {
-        currentQueue: s.globalLock.currentQueue
+        // Use optional chaining as Atlas might structure this differently
+        currentQueue: s.globalLock?.currentQueue?.total || 0
       },
       storageEngine: {
         cache: {
@@ -47,9 +55,9 @@ router.get('/', async (req, res) => {
       },
       ops: s.opcounters,
       network: {
-        bytesIn: s.network.bytesIn,
-        bytesOut: s.network.bytesOut,
-        numRequests: s.network.numRequests
+        bytesIn: s.network?.bytesIn,
+        bytesOut: s.network?.bytesOut,
+        numRequests: s.network?.numRequests
       },
       asserts: s.asserts
     };
@@ -63,7 +71,12 @@ router.get('/', async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error("Atlas Analytics Error:", error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      tip: "Ensure your Atlas User has 'clusterMonitor' or 'atlasAdmin' roles." 
+    });
   }
 });
 
