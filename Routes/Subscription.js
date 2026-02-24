@@ -13,6 +13,7 @@ const {
  * @desc Get company subscription status
  * @access Public (but should add auth middleware in production)
  */
+// Access
 router.get('/GetAllbilling', GetAllBilling);
 router.get('/status/:companyId', getSubscriptionStatus);
 
