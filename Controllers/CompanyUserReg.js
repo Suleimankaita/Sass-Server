@@ -20,7 +20,10 @@ const RegisterStaff = asyncHandler(async (req, res) => {
         return res.status(400).json({ message: 'All fields are required' });
     }
 
-    // 2. Check if user is Admin or Manager (Authorization Check)
+    const emailfound=await Profile.findOne({Email}).collation({ strength: 2, locale: 'en' });
+    if(emailfound)return res.status(409).json({ message: 'Email already in use' });
+        
+    //  2. Check if user is Admin or Manager (Authorization Check)
     const admin = await Admin.findById(userId).select('companyId');
     let isAdmin = !!admin;
     let requester = admin;
