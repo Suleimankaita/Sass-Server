@@ -12,6 +12,7 @@ const path = require("path");
 const http = require("http");
 const {Getproducts}=require("./Controllers/Getproducts")
 const {GetUserSaleData}=require("./Controllers/GetUserSaleData")
+const {ViewProduct}=require("./Controllers/ViewProducts")
 const {GetBranchproducts}=require("./Controllers/GetBranchProducts")
 const {AllBracodeGetproducts}=require("./Controllers/AllProductsBarcode")
 const initNotificationCron= require("./Controllers/initNotificationCron")
@@ -200,6 +201,17 @@ app.use((req, res, next) => {
 // Initialize ticket socket handlers
 
 socketController(io);
+initCustomerCare(io);
+    // setInterval(() => {
+      
+    //   initNotificationCron(io);
+    // }, 1000);
+    Getproducts(io);
+    AllBracodeGetproducts(io);
+    GetUserSaleData(io);
+    GetBranchproducts(io);
+    ViewProduct(io)
+    
 io.on("connection", (socket) => {
   // connected to worker
   // setInterval(() => {
@@ -213,19 +225,12 @@ io.on("connection", (socket) => {
   socket.on("join_admin_pool", () => {
     socket.join("super_admins");
   });
+
     // socket.on('loc',(coords)=>{
     //   console.log(coords)
     // })
     
-    initCustomerCare(io);
-    // setInterval(() => {
-      
-    //   initNotificationCron(io);
-    // }, 1000);
-    Getproducts(io);
-    AllBracodeGetproducts(io);
-    GetUserSaleData(io);
-    GetBranchproducts(io);
+    
     // }, 1000);
     
 });
@@ -566,6 +571,8 @@ apiRoutes.use("/api/auth/", require("./Routes/ResetPassword"));
 apiRoutes.use("/Products/", require("./Routes/GetComapnyProduct"));
 
 apiRoutes.use("/Transaction", require("./Routes/AddTransaction"));
+
+apiRoutes.use("/GetViewProducts", require("./Routes/GetViewsProducts"));
 
 apiRoutes.use("/Settings/", upload.fields([{name:'companyLogo',maxCount:1},{name:'slug',maxCount:1}]), require("./Routes/CompanySettings"));
 

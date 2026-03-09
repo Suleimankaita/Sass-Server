@@ -20,6 +20,7 @@ const CompanySchema = new mongoose.Schema(
     CategoriesId: [{ type: mongoose.Schema.Types.ObjectId, ref: "CateGories" }],
     Orders: [{ type: mongoose.Schema.Types.ObjectId, ref: "Order" }],
     SaleId: [{ type: mongoose.Schema.Types.ObjectId, ref: "Sale" }],
+    ProductViewsId: [{ type: mongoose.Schema.Types.ObjectId, ref: "ProductView" }],
     WalletNumber: Number,
     walletBalance: { type: [Number], default: 0 },
 

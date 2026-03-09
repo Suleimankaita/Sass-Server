@@ -32,6 +32,8 @@ const BranchSchema = new mongoose.Schema(
     DealsId: { type: mongoose.Schema.Types.ObjectId, ref: "DealProduct" },
     ownerId: { type: mongoose.Schema.Types.ObjectId, ref: "Admin" },
     CompanyUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "Company_User" }],
+        ProductViewsId: [{ type: mongoose.Schema.Types.ObjectId, ref: "ProductView" }],
+  
     EcomerceProducts: [{ type: mongoose.Schema.Types.ObjectId, ref: "EcomerceProducts" }],
     POSProductsId: [{ type: mongoose.Schema.Types.ObjectId, ref: "POSProducts" }],
     Orders: [{ type: mongoose.Schema.Types.ObjectId, ref: "Order" }],
