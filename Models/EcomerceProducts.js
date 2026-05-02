@@ -55,7 +55,10 @@ sku: {
     img: [String],
 
     user_add: String,
-
+    rates:{
+      type:Number,
+      default:0
+    },
     // For daily logs
     date: { type: String, default: () => new Date().toISOString().split("T")[0] },
     time: { type: String, default: () => new Date().toLocaleTimeString() },

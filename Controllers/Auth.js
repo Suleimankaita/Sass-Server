@@ -17,7 +17,7 @@ const transporter = nodemailer.createTransport({
 const Auth = asynchandler(async (req, res) => {
     try {
         const { Username, Password } = req.body;
-
+        console.log(req.body)
         if (!Username || !Password) return res.status(400).json({ message: 'Username and Password are required' });
 
         const found = await User.findOne({ Username }).populate('UserProfileId');

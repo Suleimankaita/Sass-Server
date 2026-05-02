@@ -167,6 +167,7 @@ const getUserById = async (req, res) => {
             name: user.Firstname && user.Lastname 
                 ? `${user.Firstname} ${user.Lastname}` 
                 : user.Username || 'Unknown',
+                img: user.UserProfileId?.profileImage || null,
             email: user.Email || user.UserProfileId?.Email || 'No email',
             role: user.Role || 'User',
             status: user.Active ? 'ACTIVE' : 'SUSPENDED',

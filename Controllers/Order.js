@@ -85,6 +85,7 @@ const createOrder = asyncHandler(async (req, res) => {
         delivery = {} 
     } = req.body;
 
+    console.log(req.body)
     // 1. Fetch all products in the 'ids' array from the database
     // Use $in to find multiple documents by an array of IDs
     const [regularProducts, dealProducts] = await Promise.all([
@@ -269,7 +270,7 @@ const createOrder = asyncHandler(async (req, res) => {
 
         // 1. Identify the Admin
         if (group.branchId && group.branchId !== "null") {
-            const companyWithBranch = await Company.findOne({ BranchId: group.branchId }).exec().lean();
+            const companyWithBranch = await Company.findOne({ BranchId: group.branchId }).exec();
             if (companyWithBranch) {
                 targetAdmin = await Admin.findOne({ companyId: companyWithBranch._id }).populate("UserProfileId").exec();
                 sellerName = `${companyWithBranch.CompanyName} (Branch)`;
@@ -641,11 +642,11 @@ const listOrders = asyncHandler(async (req, res) => {
 const updateOrderStatus = asyncHandler(async (req, res) => {
   const { id } = req.params; // This could be the ID of ONE of the orders
   const { status, paymentStatus } = req.body;
-
   if (!id) return res.status(400).json({ success: false, message: "Order ID is required" });
 
   // 1️⃣ Find the "Target" order first to get the paymentReference
   const targetOrder = await Order.findById(id);
+  console.log(targetOrder)
   if (!targetOrder) return res.status(404).json({ success: false, message: "Order not found" });
 
   // 2️⃣ Find ALL orders that share the same paymentReference
@@ -654,6 +655,7 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
     paymentReference: targetOrder.paymentReference 
   });
 
+  
   const updatePromises = [];
 
   // 3️⃣ Loop through every related order

@@ -127,8 +127,16 @@ const allowedOrigins = [
   "https://172.20.10.2:5173/",
   'https://your-production-domain.com',
   "www.ysstore.com",
+  " http://172.20.10.6:3000",
   "https://www.ysstore.com",
   "https://ysstore.com",
+  "exp://172.20.10.6:8081",
+  'http://localhost:8081',
+"http://192.168.56.1:3500",
+"http://192.168.56.1:8081",
+"http://172.28.96.1:3500"
+
+
 ];
 
 
@@ -589,6 +597,10 @@ apiRoutes.use("/Auth/CompanyRegs",
 apiRoutes.use("/food/", upload.single('image'), require("./Routes/FoodPrice"));
 
 apiRoutes.use("/CompanyUsersRegs", require("./Routes/CompanyUsersRegs"));
+
+apiRoutes.use("/wish", require("./Routes/wishlist"));
+
+apiRoutes.use("/wishDelete", require("./Routes/RemoveWishilist"));
 
 apiRoutes.use("/Cart", require("./Routes/Cart"));
 

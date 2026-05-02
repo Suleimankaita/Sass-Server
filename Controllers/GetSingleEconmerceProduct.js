@@ -31,7 +31,7 @@ const GetEcomersingleProducts=asyncHandler(async(req,res)=>{
                     description:foundproduct.description,
                     stock:foundproduct.quantity||foundproduct.unitsLeft,
                     CompanyName:found?found.CompanyName:'',
-                    filteredByCate:filteredByCate? filteredByCate._doc:[],
+                    filteredByCate:filteredByCate? [filteredByCate._doc]:[],
 
                 }
                 res.status(201).json(result)
